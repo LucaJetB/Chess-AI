@@ -66,6 +66,17 @@ impl Piece {
 enum Color {
     White,
     Black,
+    //opposite color func
+
+}
+
+impl Color {
+    pub fn opposite_color(&self) -> Self {
+        match self {
+            White => Black,
+            Black => White,
+        }
+    }
 }
 
 
@@ -163,9 +174,6 @@ impl Board {
     pub fn get_moves(&self, c: Color) -> Vec<Move> {
         let mut vec: Vec<Move> = Vec::new();
         let mut add_move = |m: Move|{
-            // if m.to[0] <= 7 && m.to[1] <= 7 && m.to[0] >= 0 && m.to[1] >= 0 {
-            //     vec.push(m);
-            // }
             if matches!(m.to,[0..=7,0..=7]) {
                vec.push(m);
             }
@@ -197,6 +205,76 @@ impl Board {
                                 add_move(Move {from: [i,j], to: [i+2,j-1]});
 
                             }
+                            Bishop => {
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i+s,j+s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i+s,j-s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i-s,j+s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i-s,j-s]});
+                                }
+                            }
+
+                            Rook => {
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i+s,j]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i,j+s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i-s,j]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i,j-s]});
+                                }
+                            }
+
+                            Queen => {
+                                //rook moves
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i+s,j]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i,j+s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i-s,j]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i,j-s]});
+                                }
+                                //bishop move
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i+s,j+s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i+s,j-s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i-s,j+s]});
+                                }
+                                for s in 0..8 {
+                                    add_move(Move {from: [i,j], to: [i-s,j-s]});
+                                }
+                            }
+
+                            King => {
+                                add_move(Move {from: [i,j], to: [i+1,j]});
+                                add_move(Move {from: [i,j], to: [i,j+1]});
+                                add_move(Move {from: [i,j], to: [i+1,j+1]});
+                                add_move(Move {from: [i,j], to: [i-1,j]});
+                                add_move(Move {from: [i,j], to: [i,j-1]});
+                                add_move(Move {from: [i,j], to: [i-1,j-1]});
+                                add_move(Move {from: [i,j], to: [i+1,j-1]});
+                                add_move(Move {from: [i,j], to: [i-1,j+1]});
+                            }
+
                         }
                     },
                     _ => {},
@@ -206,5 +284,6 @@ impl Board {
         vec
     }
 }
+
 
 
