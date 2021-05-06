@@ -66,7 +66,6 @@ impl Piece {
 enum Color {
     White,
     Black,
-    //opposite color func
 
 }
 
@@ -126,6 +125,7 @@ struct Board {
      arr: [[Option<ColoredPiece>; 8]; 8],
 }
 
+
 impl Board {
     fn from_str(sboard: &str) -> Self {
         assert!(sboard.len() == 8*16);
@@ -178,6 +178,19 @@ impl Board {
                vec.push(m);
             }
         };
+        let mut get_piece = |pos: [i8; 2]| {
+            if matches!(pos, [0..=7,0..=7]) {
+                self.arr[i as usize][j as usize]
+            } else {
+                None
+            }
+        };
+
+        let mut try_add_capture_move = |c: Color, m: Move| {
+            if matches!(get_piece(m.to), Some(ColoredPiece{color, ..}) if color != c) {
+                add_move(m);
+            }
+        };
 
         for i in 0..8_i8{
             for j in 0..8_i8 {
@@ -193,88 +206,341 @@ impl Board {
                                     add_move(Move {from: [i,j], to:[i, j+(2*dir)]});
                                 }  
                                 add_move(Move {from: [i,j], to: [i,j+dir]});
+
+                                try_add_capture_move(c, Move {from: [i,j], to: [i+1,j+dir]});
+                                try_add_capture_move(c, Move {from: [i,j], to: [i-1,j+dir]});
+
+                                // if get_pice on diagonals returns opposite color then add that piece loc to moves
                             }
                             Knight => {
-                                add_move(Move {from: [i,j], to: [i+1,j+2]});
-                                add_move(Move {from: [i,j], to: [i+2,j+1]});
-                                add_move(Move {from: [i,j], to: [i-1,j+2]});
-                                add_move(Move {from: [i,j], to: [i-2,j+1]});
-                                add_move(Move {from: [i,j], to: [i-1,j-2]});
-                                add_move(Move {from: [i,j], to: [i-2,j-1]});
-                                add_move(Move {from: [i,j], to: [i+1,j-2]});
-                                add_move(Move {from: [i,j], to: [i+2,j-1]});
+                                if matches!(get_piece(]i+1,j+2]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j+2]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+1,j+2]});
+                                }
 
+                                if matches!(get_piece(]i+2,j+1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+2,j+1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+2,j+1]});
+                                }
+
+                                if matches!(get_piece(]i-1,j+2]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j+2]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-1,j+2]});
+                                }
+
+                                if matches!(get_piece(]i-2,j+1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-2,j+1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-2,j+1]});
+                                }
+
+                                if matches!(get_piece(]i-1,j-2]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j-2]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-1,j-2]});
+                                }
+
+                                if matches!(get_piece(]i-2,j-1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-2,j-1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-2,j-1]});
+                                }
+
+                                if matches!(get_piece(]i+1,j-2]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j-2]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+1,j-2]});
+                                }
+
+                                if matches!(get_piece(]i+2,j-1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+2,j-1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+2,j-1]});
+                                }
                             }
+
                             Bishop => {
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i+s,j+s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i+s,j-s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i-s,j+s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i-s,j-s]});
+                                let mut up_left = false;
+                                let mut up_right = false;
+                                let mut down_left = false;
+                                let mut down_right = false;
+                                let mut s = 1;
+                                while up_left || up_right || down_left || down_right == false {
+                                    if !Self::in_bounds([i+s,j+s]) {
+                                        down_right = true;
+                                    }
+                                    if matches!(get_piece([i+s,j+s]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i+s,j+s]});
+                                        down_right = true;
+                                    } 
+                                    else if down_right == false {
+                                        add_move(Move {from: [i,j], to: [i+s,j+s]});
+                                    }
+
+                                    if !Self::in_bounds([i-s,j+s]) {
+                                        down_left = true;
+                                    }
+                                    if matches!(get_piece([i-s,j+s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i-s,j+s]});
+                                        down_left = true;
+                                    } 
+                                    else if down_left == false {
+                                        add_move(Move {from: [i,j], to: [i-s,j+s]});
+                                    }
+
+                                    if !Self::in_bounds([i-s,j-s]) {
+                                        up_left = true;
+                                    }
+                                    if matches!(get_piece([i-s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i-s,j-s]});
+                                        up_left = true;
+                                    } 
+                                    else if up_left == false {
+                                        add_move(Move {from: [i,j], to: [i-s,j-s]});
+                                    }
+
+                                    if !Self::in_bounds([i+s,j-s]) {
+                                        up_right = true;
+                                    }
+                                    if matches!(get_piece([i+s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i+s,j-s]});
+                                        up_right = true;
+                                    } 
+                                    else if up_right == false {
+                                        add_move(Move {from: [i,j], to: [i+s,j-s]});
+                                    }
+                                    s++;
                                 }
                             }
 
                             Rook => {
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i+s,j]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i,j+s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i-s,j]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i,j-s]});
+                                let mut left = false;
+                                let mut right = false;
+                                let mut up = false;
+                                let mut down = false;
+                                let mut s = 1;
+                                while left || right || up || down == false {
+                                    if !Self::in_bounds([i+s,j]) {
+                                        right = true;
+                                    }
+                                    if matches!(get_piece([i+s,j]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i+s,j]});
+                                        right = true;
+                                    } 
+                                    else if right == false {
+                                        add_move(Move {from: [i,j], to: [i+s,j]});
+                                    }
+
+                                    if !Self::in_bounds([i-s,j]) {
+                                        left = true;
+                                    }
+                                    if matches!(get_piece([i-s,j]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i-s,j]});
+                                        left = true;
+                                    } 
+                                    else if left == false {
+                                        add_move(Move {from: [i,j], to: [i-s,j]});
+                                    }
+
+                                    if !Self::in_bounds([i,j-s]) {
+                                        up = true;
+                                    }
+                                    if matches!(get_piece([i,j-s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i,j-s]});
+                                        up = true;
+                                    } 
+                                    else if up == false {
+                                        add_move(Move {from: [i,j], to: [i,j-s]});
+                                    }
+
+                                    if !Self::in_bounds([i,j+s]) {
+                                        down = true;
+                                    }
+                                    if matches!(get_piece([i,j+s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i,j+s]});
+                                        down = true;
+                                    } 
+                                    else if down == false {
+                                        add_move(Move {from: [i,j], to: [i,j+s]});
+                                    }
+                                    s++;
                                 }
                             }
 
                             Queen => {
-                                //rook moves
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i+s,j]});
+                                let mut up_left = false;
+                                let mut up_right = false;
+                                let mut down_left = false;
+                                let mut down_right = false;
+                                let mut s = 1;
+                                while up_left || up_right || down_left || down_right == false {
+                                    if !Self::in_bounds([i+s,j+s]) {
+                                        down_right = true;
+                                    }
+                                    if matches!(get_piece([i+s,j+s]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i+s,j+s]});
+                                        down_right = true;
+                                    } 
+                                    else if down_right == false {
+                                        add_move(Move {from: [i,j], to: [i+s,j+s]});
+                                    }
+
+                                    if !Self::in_bounds([i-s,j+s]) {
+                                        down_left = true;
+                                    }
+                                    if matches!(get_piece([i-s,j+s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i-s,j+s]});
+                                        down_left = true;
+                                    } 
+                                    else if down_left == false {
+                                        add_move(Move {from: [i,j], to: [i-s,j+s]});
+                                    }
+
+                                    if !Self::in_bounds([i-s,j-s]) {
+                                        up_left = true;
+                                    }
+                                    if matches!(get_piece([i-s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i-s,j-s]});
+                                        up_left = true;
+                                    } 
+                                    else if up_left == false {
+                                        add_move(Move {from: [i,j], to: [i-s,j-s]});
+                                    }
+
+                                    if !Self::in_bounds([i+s,j-s]) {
+                                        up_right = true;
+                                    }
+                                    if matches!(get_piece([i+s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i+s,j-s]});
+                                        up_right = true;
+                                    } 
+                                    else if up_right == false {
+                                        add_move(Move {from: [i,j], to: [i+s,j-s]});
+                                    }
+                                    s++;
                                 }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i,j+s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i-s,j]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i,j-s]});
-                                }
-                                //bishop move
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i+s,j+s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i+s,j-s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i-s,j+s]});
-                                }
-                                for s in 0..8 {
-                                    add_move(Move {from: [i,j], to: [i-s,j-s]});
+
+                                let mut left = false;
+                                let mut right = false;
+                                let mut up = false;
+                                let mut down = false;
+                                let mut s = 1;
+                                while left || right || up || down == false {
+                                    if !Self::in_bounds([i+s,j]) {
+                                        right = true;
+                                    }
+                                    if matches!(get_piece([i+s,j]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i+s,j]});
+                                        right = true;
+                                    } 
+                                    else if right == false {
+                                        add_move(Move {from: [i,j], to: [i+s,j]});
+                                    }
+
+                                    if !Self::in_bounds([i-s,j]) {
+                                        left = true;
+                                    }
+                                    if matches!(get_piece([i-s,j]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i-s,j]});
+                                        left = true;
+                                    } 
+                                    else if left == false {
+                                        add_move(Move {from: [i,j], to: [i-s,j]});
+                                    }
+
+                                    if !Self::in_bounds([i,j-s]) {
+                                        up = true;
+                                    }
+                                    if matches!(get_piece([i,j-s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i,j-s]});
+                                        up = true;
+                                    } 
+                                    else if up == false {
+                                        add_move(Move {from: [i,j], to: [i,j-s]});
+                                    }
+
+                                    if !Self::in_bounds([i,j+s]) {
+                                        down = true;
+                                    }
+                                    if matches!(get_piece([i,j+s]]), Some(ColoredPiece{color, ..})) {
+                                        try_add_capture_move(c, Move {from: [i,j], to: [i,j+s]});
+                                        down = true;
+                                    } 
+                                    else if down == false {
+                                        add_move(Move {from: [i,j], to: [i,j+s]});
+                                    }
+                                    s++;
                                 }
                             }
 
                             King => {
-                                add_move(Move {from: [i,j], to: [i+1,j]});
-                                add_move(Move {from: [i,j], to: [i,j+1]});
-                                add_move(Move {from: [i,j], to: [i+1,j+1]});
-                                add_move(Move {from: [i,j], to: [i-1,j]});
-                                add_move(Move {from: [i,j], to: [i,j-1]});
-                                add_move(Move {from: [i,j], to: [i-1,j-1]});
-                                add_move(Move {from: [i,j], to: [i+1,j-1]});
-                                add_move(Move {from: [i,j], to: [i-1,j+1]});
-                            }
+                                if matches!(get_piece(]i+1,j+1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j+1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+1,j+1]});
+                                }
 
+                                if matches!(get_piece(]i+1,j]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+1,j]});
+                                }
+
+                                if matches!(get_piece(]i,j+1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i,j+1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i,j+1]});
+                                }
+
+                                if matches!(get_piece(]i-1,j-1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j-1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-1,j-1]});
+                                }
+
+                                if matches!(get_piece(]i-1,j]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-1,j]});
+                                }
+
+                                if matches!(get_piece(]i,j-1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i,j-1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i,j-1]});
+                                }
+
+                                if matches!(get_piece(]i+1,j-1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j-1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i+1,j-1]});
+                                }
+
+                                if matches!(get_piece(]i-1,j+1]), Some(ColoredPiece{color, ..})) {
+                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j+1]});
+                                }
+                                else {
+                                    add_move(Move {from: [i,j], to: [i-1,j+1]});
+                                }
+                            }
                         }
                     },
                     _ => {},
@@ -282,6 +548,10 @@ impl Board {
             }     
         }
         vec
+    }
+
+    pub fn in_bounds(pos: [i8;2]) -> bool {
+        matches!(pos, [0..=7,0..=7])
     }
 }
 
