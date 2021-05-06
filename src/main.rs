@@ -213,56 +213,56 @@ impl Board {
                                 // if get_pice on diagonals returns opposite color then add that piece loc to moves
                             }
                             Knight => {
-                                if matches!(get_piece(]i+1,j+2]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+1,j+2]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+1,j+2]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i+1,j+2]});
                                 }
 
-                                if matches!(get_piece(]i+2,j+1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+2,j+1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+2,j+1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i+2,j+1]});
                                 }
 
-                                if matches!(get_piece(]i-1,j+2]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-1,j+2]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-1,j+2]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i-1,j+2]});
                                 }
 
-                                if matches!(get_piece(]i-2,j+1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-2,j+1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-2,j+1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i-2,j+1]});
                                 }
 
-                                if matches!(get_piece(]i-1,j-2]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-1,j-2]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-1,j-2]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i-1,j-2]});
                                 }
 
-                                if matches!(get_piece(]i-2,j-1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-2,j-1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-2,j-1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i-2,j-1]});
                                 }
 
-                                if matches!(get_piece(]i+1,j-2]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+1,j-2]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+1,j-2]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i+1,j-2]});
                                 }
 
-                                if matches!(get_piece(]i+2,j-1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+2,j-1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+2,j-1]});
                                 }
                                 else {
@@ -291,7 +291,7 @@ impl Board {
                                     if !Self::in_bounds([i-s,j+s]) {
                                         down_left = true;
                                     }
-                                    if matches!(get_piece([i-s,j+s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i-s,j+s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i-s,j+s]});
                                         down_left = true;
                                     } 
@@ -302,7 +302,7 @@ impl Board {
                                     if !Self::in_bounds([i-s,j-s]) {
                                         up_left = true;
                                     }
-                                    if matches!(get_piece([i-s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i-s,j-s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i-s,j-s]});
                                         up_left = true;
                                     } 
@@ -313,7 +313,7 @@ impl Board {
                                     if !Self::in_bounds([i+s,j-s]) {
                                         up_right = true;
                                     }
-                                    if matches!(get_piece([i+s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i+s,j-s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i+s,j-s]});
                                         up_right = true;
                                     } 
@@ -345,7 +345,7 @@ impl Board {
                                     if !Self::in_bounds([i-s,j]) {
                                         left = true;
                                     }
-                                    if matches!(get_piece([i-s,j]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i-s,j]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i-s,j]});
                                         left = true;
                                     } 
@@ -356,7 +356,7 @@ impl Board {
                                     if !Self::in_bounds([i,j-s]) {
                                         up = true;
                                     }
-                                    if matches!(get_piece([i,j-s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i,j-s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i,j-s]});
                                         up = true;
                                     } 
@@ -367,7 +367,7 @@ impl Board {
                                     if !Self::in_bounds([i,j+s]) {
                                         down = true;
                                     }
-                                    if matches!(get_piece([i,j+s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i,j+s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i,j+s]});
                                         down = true;
                                     } 
@@ -399,7 +399,7 @@ impl Board {
                                     if !Self::in_bounds([i-s,j+s]) {
                                         down_left = true;
                                     }
-                                    if matches!(get_piece([i-s,j+s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i-s,j+s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i-s,j+s]});
                                         down_left = true;
                                     } 
@@ -410,7 +410,7 @@ impl Board {
                                     if !Self::in_bounds([i-s,j-s]) {
                                         up_left = true;
                                     }
-                                    if matches!(get_piece([i-s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i-s,j-s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i-s,j-s]});
                                         up_left = true;
                                     } 
@@ -421,7 +421,7 @@ impl Board {
                                     if !Self::in_bounds([i+s,j-s]) {
                                         up_right = true;
                                     }
-                                    if matches!(get_piece([i+s,j-s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i+s,j-s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i+s,j-s]});
                                         up_right = true;
                                     } 
@@ -451,7 +451,7 @@ impl Board {
                                     if !Self::in_bounds([i-s,j]) {
                                         left = true;
                                     }
-                                    if matches!(get_piece([i-s,j]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i-s,j]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i-s,j]});
                                         left = true;
                                     } 
@@ -462,7 +462,7 @@ impl Board {
                                     if !Self::in_bounds([i,j-s]) {
                                         up = true;
                                     }
-                                    if matches!(get_piece([i,j-s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i,j-s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i,j-s]});
                                         up = true;
                                     } 
@@ -473,7 +473,7 @@ impl Board {
                                     if !Self::in_bounds([i,j+s]) {
                                         down = true;
                                     }
-                                    if matches!(get_piece([i,j+s]]), Some(ColoredPiece{color, ..})) {
+                                    if matches!(get_piece([i,j+s]), Some(ColoredPiece{color, ..})) {
                                         try_add_capture_move(c, Move {from: [i,j], to: [i,j+s]});
                                         down = true;
                                     } 
@@ -485,56 +485,56 @@ impl Board {
                             }
 
                             King => {
-                                if matches!(get_piece(]i+1,j+1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+1,j+1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+1,j+1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i+1,j+1]});
                                 }
 
-                                if matches!(get_piece(]i+1,j]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+1,j]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+1,j]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i+1,j]});
                                 }
 
-                                if matches!(get_piece(]i,j+1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i,j+1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i,j+1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i,j+1]});
                                 }
 
-                                if matches!(get_piece(]i-1,j-1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-1,j-1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-1,j-1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i-1,j-1]});
                                 }
 
-                                if matches!(get_piece(]i-1,j]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-1,j]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-1,j]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i-1,j]});
                                 }
 
-                                if matches!(get_piece(]i,j-1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i,j-1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i,j-1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i,j-1]});
                                 }
 
-                                if matches!(get_piece(]i+1,j-1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i+1,j-1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i+1,j-1]});
                                 }
                                 else {
                                     add_move(Move {from: [i,j], to: [i+1,j-1]});
                                 }
 
-                                if matches!(get_piece(]i-1,j+1]), Some(ColoredPiece{color, ..})) {
+                                if matches!(get_piece([i-1,j+1]), Some(ColoredPiece{color, ..})) {
                                     try_add_capture_move(c, Move {from: [i,j], to: [i-1,j+1]});
                                 }
                                 else {
