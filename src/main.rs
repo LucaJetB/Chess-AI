@@ -122,9 +122,94 @@ struct MoveGenerator<'a> {
 }
 
 impl<'a> MoveGenerator<'a> {
-    fn get_piece_moves(&self, moves: &mut Vec<Move>) {
-        // match self.piece {
-            Pawn => self.get_parnmoves()
+    pub fn in_bounds(pos: [i8;2]) -> bool {
+        matches!(pos, [0..=7,0..=7])
+    }
+
+    fn get_pawnmoves(&self, moves: &mut Vec<Move>, board: &'a Board) {
+        let (pawn_start, dir): (i8, i8) = match piece.color {
+            White => (6,-1),
+            Black => (1,1),
+        };
+        if self.start_pos[1] == pawn_start {
+            if !matches!(board.arr[self.start_pos[0]][3], Some(ColoredPiece{})) {
+                if !matches!(board.arr[self.start_pos[0]][4], Some(ColoredPiece{})) {
+                    let m = Move {
+                        from: self.start_pos,
+                        to: [self.start_pos[0]][self.start_pos[1] + 2*dir],
+                    };
+                    moves.push(m)
+                }
+            }
+        }
+        else {
+            if !matches!(board.arr[self.start_pos[0]][self.start_pos[1] + dir], Some(ColoredPiece{})) {
+                let m = Move {
+                    from: self.start_pos,
+                    to: [self.start_pos[0]][self.start_pos[1] + dir],
+                };
+                if in_bounds([self.start_pos[0], self.start_pos[1] + dir]) {
+                    moves.push(m)
+                }
+            }
+        }
+        if !matches!(board.arr[self.start_pos[0] + 1][self.start_pos[1] + dir], Some(ColoredPiece{color})) {
+            if color != self.piece.color {
+                let m = Move {
+                    from: self.start_pos,
+                    to: [self.start_pos[0] + 1][self.start_pos[1] + dir],
+                }; 
+                moves.push(m)
+            }
+        }
+        else if !matches!(board.arr[self.start_pos[0] - 1][self.start_pos[1] + dir], Some(ColoredPiece{color})) {
+            if color != self.piece.color {
+                let m = Move {
+                    from: self.start_pos,
+                    to: [self.start_pos[0] - 1][self.start_pos[1] + dir],
+                }; 
+                moves.push(m)
+            }
+        }
+    }
+
+    fn get_knightmoves(&self, moves: &mut Vec<Moves>, board: &'a Board) {
+        let xvals = [2,2,1,1,-1,-1,-2,-2];
+        let yvals = [1,-1,2,-2,2,-2,1,-1];
+        for i in 0..7 {
+            let m = Move {
+                from: self.start_pos,
+                to: [self.start_pos[0] + xvals[i]][self.start_pos[1] + yvals[i]],
+            };
+
+            if in_bounds([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]]) {
+                if matches!(board.arr[self.start_pos[0] + xvals[i]][self.start_pos[1] + yvals[i]], Some(ColoredPiece{color})) {
+                    if color != self.piece.color {
+
+                        moves.push(m)
+                    }
+                }
+                else {
+                    moves.push(m)
+                }
+            }
+        }
+    }
+
+    fn get_bishopmoves(&self, moves: &mut Vec<Moves>, board: &'a Board) {
+        let (mut up_left, mut up_right, mut down_left, mut down_right) = (true, true, true, true);
+        let mut i = 1;
+        while up_left || up_right || down_left || down_right {
+            //if operators could be used like vars this is only one loop with 2-3 checks
+        }
+
+    }
+
+    fn get_piece_moves(&self, moves: &mut Vec<Move>, board: &'a Board) {
+         match self.piece {
+            Pawn => self.get_pawnmoves(&self, &mut moves, & board),
+            Knight => self.get_knightmoves(&self, &mut moves, & board),
+            Bishop => self.get_bishopmoves(&self, &mut mobes, & board),
         }
     }
     fn get_moves(c: Color, board: &'a Board) -> Vec<Move> {
@@ -138,13 +223,13 @@ impl<'a> MoveGenerator<'a> {
                             start_pos: [i,j], 
                             piece: ColoredPiece{color, piece},
                         };
-                        gen.get_piece_moves(&mut results);
+                        gen.get_piece_moves(& board, &mut results);
                     }
                     _ => {}
                }
             }
         }
-        results
+        results // this vec is only for a specific piece, gets overflowed when multiple pieces come into play
     }
 }
 #[derive(Debug)]
@@ -248,83 +333,7 @@ impl Board {
                 match self.arr[i as usize][j as usize] {
                     Some(ColoredPiece{color, piece}) if color == c => {
                         match piece {
-                            Pawn => {
-                                let (pawn_start, dir): (i8, i8) = match color {
-                                    White => (6,-1),
-                                    Black => (1,1),
-                                };
-
-                                if add_move_raw(color, Move {from: [i,j], to: [i,j+dir]}, false) {
-                                    if i == pawn_start {
-                                        add_move_raw(c, Move {from: [i,j], to:[i, j+(2*dir)]}, false);
-                                    }  
-                                }
-                                
-                                if matches!(get_piece([i+1,j+dir]), Some(ColoredPiece{color, ..}) if color != c)  {
-                                    add_move(c, Move {from: [i,j], to: [i+1,j+dir]});
-                                }
-                                if matches!(get_piece([i-1,j+dir]), Some(ColoredPiece{color, ..}) if color != c)  {
-                                    add_move(c, Move {from: [i,j], to: [i-1,j+dir]});
-                                }
-                            }
-                            Knight => {
-                                if matches!(get_piece([i+1,j+2]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j+2]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i+1,j+2]});
-                                }
-
-                                if matches!(get_piece([i+2,j+1]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i+2,j+1]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i+2,j+1]});
-                                }
-
-                                if matches!(get_piece([i-1,j+2]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j+2]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i-1,j+2]});
-                                }
-
-                                if matches!(get_piece([i-2,j+1]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i-2,j+1]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i-2,j+1]});
-                                }
-
-                                if matches!(get_piece([i-1,j-2]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i-1,j-2]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i-1,j-2]});
-                                }
-
-                                if matches!(get_piece([i-2,j-1]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i-2,j-1]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i-2,j-1]});
-                                }
-
-                                if matches!(get_piece([i+1,j-2]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i+1,j-2]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i+1,j-2]});
-                                }
-
-                                if matches!(get_piece([i+2,j-1]), Some(ColoredPiece{color, ..})) {
-                                    try_add_capture_move(c, Move {from: [i,j], to: [i+2,j-1]});
-                                }
-                                else {
-                                    add_move(Move {from: [i,j], to: [i+2,j-1]});
-                                }
-                            }
-
+                            
                             Bishop => {
                                 let mut up_left = false;
                                 let mut up_right = false;
@@ -563,9 +572,6 @@ impl Board {
         vec
     }
 
-    pub fn in_bounds(pos: [i8;2]) -> bool {
-        matches!(pos, [0..=7,0..=7])
-    }
 }
 
 
