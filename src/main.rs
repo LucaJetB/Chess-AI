@@ -113,18 +113,36 @@ impl ColoredPiece {
 
 
 }
+ // create pos as a struct or tuple for easy arithmetic funcs on it
 
 #[derive(Debug)]
 struct MoveGenerator<'a> {
     board: &'a Board,
     start_pos: [i8;2],
     piece: ColoredPiece,
+    // add moves in here
+}
+
+enum DesitinationState {
+    Free,
+    Occupied,
+    Capturable,
+    OutOfBounds,
 }
 
 impl<'a> MoveGenerator<'a> {
-    pub fn in_bounds(pos: [i8;2]) -> bool {
-        matches!(pos, [0..=7,0..=7])
+    fn get_dst_state(&self, pos: [i8;2]) -> DesitinationState {
+        use DesitinationState::*;
+        if !Board::in_bounds(pos) {
+            return OutOfBounds;
+        }
+        match self.board.get(pos) {
+            Some(ColoredPiece {color, ..}) if color != self.piece.color => Capturable,
+            Some(_) => Occupied,
+            None => Free,
+        }
     }
+
 
     fn get_pawnmoves(&self, moves: &mut Vec<Move>, board: &'a Board) {
         let (pawn_start, dir): (i8, i8) = match piece.color {
@@ -196,23 +214,44 @@ impl<'a> MoveGenerator<'a> {
         }
     }
 
-    fn get_bishopmoves(&self, moves: &mut Vec<Moves>, board: &'a Board) {
-        let (mut up_left, mut up_right, mut down_left, mut down_right) = (true, true, true, true);
-        let mut i = 1;
-        while up_left || up_right || down_left || down_right {
-            //if operators could be used like vars this is only one loop with 2-3 checks
+    fn get_linemoves(&self, moves: &mut Vec<[i8;2]>, dirs: &[[i8;2]]) {
+        use DesitinationState::*;
+        for dir in dirs {
+            for i in 1..7 {
+                let dst = [self.start_pos[0] + (i*dir[0]), self.start_pos[1] + (i*dir[1])];
+                match self.get_dst_state(dst) {
+                    Free => moves.push(dst),
+                    Occupied | OutOfBounds => break,
+                    Capturable => {
+                        moves.push(dst);
+                        break
+                    }
+                }
+            }
         }
+    }
+    //for changing operators pass parameters as arrays or could pass lamdas
 
+    fn get_bishopmoves(&self, moves: &mut Vec<[i8;2]>, board: &'a Board) {
+        self.get_linemoves(moves, &[[1,1],[-1,1],[-1,-1],[1,-1]])
     }
 
-    fn get_piece_moves(&self, moves: &mut Vec<Move>, board: &'a Board) {
+    fn get_rookmoves(&self, moves: &mut Vec<[i8;2]>, board: &'a Board) {
+        self.get_linemoves(moves ,&[[1,0],[-1,0],[0,-1],[0,1]])
+    }
+
+    fn get_queenmoves(&self, moves: &mut Vec<[i8;2]>, board: &'a Board) {
+        self.get_linemoves(moves ,&[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]])
+    }
+
+    fn get_piece_moves(&self, moves: &mut Vec<[i8;2]>, board: &'a Board) {
          match self.piece {
             Pawn => self.get_pawnmoves(&self, &mut moves, & board),
             Knight => self.get_knightmoves(&self, &mut moves, & board),
             Bishop => self.get_bishopmoves(&self, &mut mobes, & board),
         }
     }
-    fn get_moves(c: Color, board: &'a Board) -> Vec<Move> {
+    fn get_moves(c: Color, board: &'a Board) -> Vec<[i8;2]> {
         let mut results = Vec::new();
         for i in 0..8_i8 {
             for j in 0..8_i8 {
@@ -262,6 +301,14 @@ impl Board {
     fn print_board(sboard: &str) {
         println!("{}", sboard);
         
+    }
+
+    pub fn in_bounds(pos: [i8;2]) -> bool {
+        matches!(pos, [0..=7,0..=7])
+    }
+
+    pub fn get(&self, pos: [i8; 2]) -> Option<ColoredPiece> {
+        self.arr[pos[0] as usize][pos[1] as usize]
     }
 
     fn get_advantage(b: Board) {
