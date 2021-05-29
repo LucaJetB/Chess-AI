@@ -120,7 +120,7 @@ struct MoveGenerator<'a> {
     board: &'a Board,
     start_pos: [i8;2],
     piece: ColoredPiece,
-    // add moves in here
+    moves: Vec<[i8; 2]>,
 }
 
 enum DesitinationState {
@@ -144,7 +144,7 @@ impl<'a> MoveGenerator<'a> {
     }
 
 
-    fn get_pawnmoves(&self, moves: &mut Vec<[i8;2]>) {
+    fn get_pawnmoves(&self, ) {
         let (pawn_start, dir): (i8, i8) = match self.piece.color {
             White => (6,-1),
             Black => (1,1),
@@ -152,56 +152,56 @@ impl<'a> MoveGenerator<'a> {
         if self.start_pos[1] == pawn_start {
             if !matches!(self.board.arr[self.start_pos[0] as usize][3], Some(ColoredPiece{color, piece})) {
                 if !matches!(self.board.arr[self.start_pos[0] as usize][4], Some(ColoredPiece{color, piece})) {
-                    moves.push([self.start_pos[0], self.start_pos[1] + 2*dir])
+                    self.moves.push([self.start_pos[0], self.start_pos[1] + 2*dir])
                 }
             }
         }
         else {
             if !matches!(self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] + dir) as usize], Some(ColoredPiece{color, piece})) {
                 if Board::in_bounds([self.start_pos[0], self.start_pos[1] + dir]) {
-                    moves.push([self.start_pos[0], self.start_pos[1] + dir])
+                    self.moves.push([self.start_pos[0], self.start_pos[1] + dir])
                 }
             }
         }
         if !matches!(self.board.arr[(self.start_pos[0] + 1) as usize][(self.start_pos[1] + dir) as usize], Some(ColoredPiece{color, piece})) {
             if color != self.piece.color {
-                moves.push([self.start_pos[0] + 1, self.start_pos[1] + dir])
+                self.moves.push([self.start_pos[0] + 1, self.start_pos[1] + dir])
             }
         }
         else if !matches!(self.board.arr[(self.start_pos[0] - 1) as usize][(self.start_pos[1] + dir) as usize], Some(ColoredPiece{color, piece})) {
             if color != self.piece.color {
-                moves.push([self.start_pos[0] - 1, self.start_pos[1] + dir])
+                self.moves.push([self.start_pos[0] - 1, self.start_pos[1] + dir])
             }
         }
     }
 
-    fn get_knightmoves(&self, moves: &mut Vec<[i8; 2]>) {
+    fn get_knightmoves(&self) {
         let xvals = [2,2,1,1,-1,-1,-2,-2];
         let yvals = [1,-1,2,-2,2,-2,1,-1];
         for i in 0..7 {
             if Board::in_bounds([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]]) {
                 if matches!(self.board.arr[(self.start_pos[0] + xvals[i]) as usize][(self.start_pos[1] + yvals[i]) as usize], Some(ColoredPiece{color, piece})) {
                     if color != self.piece.color {
-                        moves.push([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]])
+                        self.moves.push([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]])
                     }
                 }
                 else {
-                    moves.push([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]])
+                    self.moves.push([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]])
                 }
             }
         }
     }
 
-    fn get_linemoves(&self, moves: &mut Vec<[i8;2]>, dirs: &[[i8;2]]) {
+    fn get_linemoves(&self, dirs: &[[i8;2]]) {
         use DesitinationState::*;
         for dir in dirs {
             for i in 1..7 {
                 let dst = [self.start_pos[0] + (i*dir[0]), self.start_pos[1] + (i*dir[1])];
                 match self.get_dst_state(dst) {
-                    Free => moves.push(dst),
+                    Free => self.moves.push(dst),
                     Occupied | OutOfBounds => break,
                     Capturable => {
-                        moves.push(dst);
+                        self.moves.push(dst);
                         break
                     }
                 }
@@ -210,45 +210,45 @@ impl<'a> MoveGenerator<'a> {
     }
     //for changing operators pass parameters as arrays or could pass lamdas
 
-    fn get_bishopmoves(&self, moves: &mut Vec<[i8;2]>) {
-        self.get_linemoves(moves, &[[1,1],[-1,1],[-1,-1],[1,-1]])
+    fn get_bishopmoves(&self) {
+        self.get_linemoves(&[[1,1],[-1,1],[-1,-1],[1,-1]])
     }
 
-    fn get_rookmoves(&self, moves: &mut Vec<[i8;2]>) {
-        self.get_linemoves(moves ,&[[1,0],[-1,0],[0,-1],[0,1]])
+    fn get_rookmoves(&self) {
+        self.get_linemoves(&[[1,0],[-1,0],[0,-1],[0,1]])
     }
 
-    fn get_queenmoves(&self, moves: &mut Vec<[i8;2]>) {
-        self.get_linemoves(moves ,&[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]])
+    fn get_queenmoves(&self) {
+        self.get_linemoves(&[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]])
     }
 
-    fn get_kingmoves(&self, moves: &mut Vec<[i8; 2]>) {
+    fn get_kingmoves(&self) {
         use DesitinationState::*;
         let dirs = &[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]];
         for dir in dirs {        
             let dst = [self.start_pos[0] + (dir[0]), self.start_pos[1] + (dir[1])];
             match self.get_dst_state(dst) {
-                Free => moves.push(dst),
+                Free => self.moves.push(dst),
                 Occupied | OutOfBounds => break,
                 Capturable => {
-                    moves.push(dst);
+                    self.moves.push(dst);
                     break
                 }
             }
         }
     }
 
-    fn get_piece_moves(&self, moves: &mut Vec<[i8;2]>) {
+    fn get_piece_moves(&self) {
          match self.piece.piece {
-            Pawn => self.get_pawnmoves(&mut moves),
-            Knight => self.get_knightmoves(&mut moves),
-            Bishop => self.get_bishopmoves (&mut moves),
-            Rook => self.get_rookmoves(&mut moves),
-            Queen => self.get_queenmoves(&mut moves),
-            King => self.get_kingmoves(&mut moves),
+            Pawn => self.get_pawnmoves(),
+            Knight => self.get_knightmoves(),
+            Bishop => self.get_bishopmoves (),
+            Rook => self.get_rookmoves(),
+            Queen => self.get_queenmoves(),
+            King => self.get_kingmoves(),
         }
     }
-    fn get_moves(c: Color, board: &'a Board) -> Vec<[i8;2]> {
+    fn get_moves(c: Color, board: &'a Board) {
         let mut results = Vec::new();
         for i in 0..8_i8 {
             for j in 0..8_i8 {
@@ -258,14 +258,14 @@ impl<'a> MoveGenerator<'a> {
                             board, 
                             start_pos: [i,j], 
                             piece: ColoredPiece{color, piece},
+                            moves: results
                         };
-                        gen.get_piece_moves(&mut results);
+                        gen.get_piece_moves();
                     }
                     _ => {}
                }
             }
         }
-        results // this vec is only for a specific piece, gets overflowed when multiple pieces come into play
     }
 }
 #[derive(Debug)]
