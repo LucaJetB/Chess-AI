@@ -30,12 +30,21 @@ fn test_basic1() {
     dbg!(&b1);
     assert_eq!(b1.arr[0][6], Some(ColoredPiece{color: Black, piece: King}));
     println!("Board 1: ");
-    Board::get_advantage(b1);
+    b1.get_advantage();
     println!("");
     println!("Board 2: ");
-    Board::get_advantage(b2);
+    b2.get_advantage();
     println!("");
-    Board::print_board(board1);
+    b1.print();
+    for m in MoveGenerator::get_moves(White, &b1) {
+        let mut b = b1.clone();
+        let p = b.get(m.src);
+        b.set(m.dst, p);
+        b.set(m.src, None);
+        b.print();
+        println!("");
+    }
+    
 }
 
 
@@ -79,7 +88,6 @@ impl Color {
 }
 
 
-use std::any::Any;
 
 use Color::*; 
 use Piece::*;
@@ -110,18 +118,40 @@ impl ColoredPiece {
         };
         Self {color, piece}
     }
+    fn to_char(&self) -> char {
+        match (self.color,self.piece) {
+            (White, Pawn) => 'P',
+            (White, Knight) => 'N',
+            (White, Bishop) => 'B',
+            (White, Rook) => 'R',
+            (White, Queen) => 'Q',
+            (White, King) => 'K',
+            (Black, Pawn) => 'p',
+            (Black, Knight) => 'n',
+            (Black, Bishop) => 'b',
+            (Black, Rook) => 'r',
+            (Black, Queen) => 'q',
+            (Black, King) => 'k',
+        }
+    }
 
 
 }
  // create pos as a struct or tuple for easy arithmetic funcs on it
  //
+ #[derive(Debug)]
+struct Move {
+    src: [i8; 2],
+    dst: [i8; 2],
+}
+
 
 #[derive(Debug)]
 struct MoveGenerator<'a> {
     board: &'a Board,
     start_pos: [i8;2],
     piece: ColoredPiece,
-    moves: Vec<[i8; 2]>,
+    moves: &'a mut Vec<Move>, //if this contains all moves should it be in this struct with piece specfic values?
 }
 
 enum DesitinationState {
@@ -132,6 +162,14 @@ enum DesitinationState {
 }
 
 impl<'a> MoveGenerator<'a> {
+    fn add_move(&mut self, dst: [i8;2]) {
+        let m = Move {
+            src: self.start_pos,
+            dst
+        };
+        self.moves.push(m);
+    }
+
     fn get_dst_state(&self, pos: [i8;2]) -> DesitinationState {
         use DesitinationState::*;
         if !Board::in_bounds(pos) {
@@ -144,50 +182,39 @@ impl<'a> MoveGenerator<'a> {
         }
     }
 
-    fn get_pawnmoves(&mut self) {
-        let mut double = true;
+    fn get_pawnmoves(&mut self) { 
         use DesitinationState::*;
         let (pawn_start, dir): (i8, i8) = match self.piece.color {
             White => (6,-1),
             Black => (1, 1),
         };
-        let mut up = [self.start_pos[0] + (1*dir), self.start_pos[1]];
-        match self.get_dst_state(up) {
-            Free => self.moves.push(up),
-            Occupied | OutOfBounds => double = false,
-            Capturable => panic!("capturing forward"),
-        }
-        if double && self.start_pos[1] == pawn_start {
-            up = [up[0] + (1*dir), up[1]];
-            match self.get_dst_state(up) {
-                Free => self.moves.push(up),
-                Occupied | OutOfBounds => {},
-                Capturable => panic!("capturing forward"),
+        let dst = [self.start_pos[0] + (1*dir), self.start_pos[1]];
+        if matches!(self.get_dst_state(dst), Free) {
+            self.add_move(dst);
+            if self.start_pos[1] == pawn_start {
+                let dst = [self.start_pos[0] + (2*dir), self.start_pos[1]];
+                if matches!(self.get_dst_state(dst), Free) {
+                     self.add_move(dst)
+                }
             }
         }
-        let diag1 = [(self.start_pos[0] + (1*dir)), (self.start_pos[1] - 1)];
-        match self.get_dst_state(diag1) {
-            Free => {},
-            Occupied | OutOfBounds => {},
-            Capturable => self.moves.push(diag1),
+        for hdir in &[-1,1] {
+            let dst = [(self.start_pos[0] + (1*dir)), (self.start_pos[1] + *hdir)];
+            if matches!(self.get_dst_state(dst), Capturable) {
+                self.add_move(dst)
+            } 
         }
-        let diag2 = [(self.start_pos[0] + (1*dir)), (self.start_pos[1] + 1)];
-        match self.get_dst_state(diag2) {
-            Free => {},
-            Occupied | OutOfBounds => {},
-            Capturable => self.moves.push(diag2),
-        }
+        // TODO en passant
     }
+
     fn get_knightmoves(&mut self) {
         use DesitinationState::*;
         let xvals = [2,2,1,1,-1,-1,-2,-2];
         let yvals = [1,-1,2,-2,2,-2,1,-1];
         for i in 0..7 {
             let dst = [self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]];
-            match self.get_dst_state(dst) {
-                Free => self.moves.push(dst),
-                Occupied | OutOfBounds => {},
-                Capturable => self.moves.push(dst),
+            if matches!(self.get_dst_state(dst), Free | Capturable) {
+                self.add_move(dst)
             }
         }
     }
@@ -199,10 +226,10 @@ impl<'a> MoveGenerator<'a> {
             for i in 1..7 {
                 let dst = [self.start_pos[0] + (i*dir[0]), self.start_pos[1] + (i*dir[1])];
                 match self.get_dst_state(dst) {
-                    Free => self.moves.push(dst),
+                    Free => self.add_move(dst),
                     Occupied | OutOfBounds => break,
                     Capturable => {
-                        self.moves.push(dst);
+                        self.add_move(dst);
                         break
                     }
                 }
@@ -228,15 +255,11 @@ impl<'a> MoveGenerator<'a> {
         let dirs = &[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]];
         for dir in dirs {        
             let dst = [self.start_pos[0] + (dir[0]), self.start_pos[1] + (dir[1])];
-            match self.get_dst_state(dst) {
-                Free => self.moves.push(dst),
-                Occupied | OutOfBounds => break,
-                Capturable => {
-                    self.moves.push(dst);
-                    break
-                }
+            if matches!(self.get_dst_state(dst), Free | Capturable) {
+                self.add_move(dst);
             }
         }
+        //castling (check under attack sqaures)
     }
 
     fn get_piece_moves(&mut self) {
@@ -249,33 +272,35 @@ impl<'a> MoveGenerator<'a> {
             King => self.get_kingmoves(),
         }
     }
-    fn get_moves(c: Color, board: &'a Board) {
-        let results = Vec::new();
-        for i in 0..8_i8 {
-            for j in 0..8_i8 {
-                match board.arr[i as usize][j as usize] { //back to match
-                    Some(ColoredPiece{color, piece}) if color == c => {
-                        let mut gen = Self {
-                            board, 
-                            start_pos: [i,j], 
-                            piece: ColoredPiece{color, piece},
-                            moves: results,
-                        };
-                        gen.get_piece_moves();
-                    }
-                    _ => {}
-               }
-            }
-        }
+    
+    fn get_moves(c: Color, board: &'a Board) -> Vec<Move> {
+        movegen_get_moves(c,board)
     }
 }
-#[derive(Debug)]
-struct Move {
-    from: [i8; 2],
-    to: [i8; 2],
+// TODO prune some illegal moves with castling (only going to be 1 square else lose the game) 
+fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> { 
+    let mut results = Vec::new();
+    for i in 0..8_i8 {
+        for j in 0..8_i8 {
+            match board.arr[i as usize][j as usize] { // ifmatch!
+                Some(ColoredPiece{color, piece}) if color == c => {
+                    let mut gen = MoveGenerator {
+                        board, 
+                        start_pos: [i,j], 
+                        piece: ColoredPiece{color, piece},
+                        moves: &mut results,
+                    };
+                    gen.get_piece_moves();
+
+                }
+                _ => {}
+           }
+        }
+    }
+    results
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Board {
      arr: [[Option<ColoredPiece>; 8]; 8],
 }
@@ -296,9 +321,16 @@ impl Board {
         }
         Self {arr: board}
     }
-    fn print_board(sboard: &str) {
-        println!("{}", sboard);
-        
+    fn print(&self) {
+        for i in 0..8 {
+            for j in 0..8 {
+                match self.arr[i][j] {
+                    Some(p) => print!("{} ", p.to_char()),
+                    None => print!(". "),
+                }
+            }
+            println!()
+        }        
     }
 
     pub fn in_bounds(pos: [i8;2]) -> bool {
@@ -308,13 +340,16 @@ impl Board {
     pub fn get(&self, pos: [i8; 2]) -> Option<ColoredPiece> {
         self.arr[pos[0] as usize][pos[1] as usize]
     }
+    pub fn set(&mut self, pos: [i8; 2], p: Option<ColoredPiece>) {
+        self.arr[pos[0] as usize][pos[1] as usize] = p;
+    }
 
-    fn get_advantage(b: Board) {
+    fn get_advantage(&self) {
         let mut white_score = 0;
         let mut black_score = 0;
         for i in 0..8{
             for j in 0..8 {
-                match b.arr[i][j] {
+                match self.arr[i][j] {
                     Some(ColoredPiece{color: White, piece}) => white_score += piece.get_value(),
                     Some(ColoredPiece{color: Black, piece}) => black_score += piece.get_value(),
                     None => {},
@@ -335,6 +370,3 @@ impl Board {
     }
 
 }
-
-
-
