@@ -114,6 +114,7 @@ impl ColoredPiece {
 
 }
  // create pos as a struct or tuple for easy arithmetic funcs on it
+ //
 
 #[derive(Debug)]
 struct MoveGenerator<'a> {
@@ -143,56 +144,56 @@ impl<'a> MoveGenerator<'a> {
         }
     }
 
-
-    fn get_pawnmoves(&self, ) {
+    fn get_pawnmoves(&mut self) {
+        let mut double = true;
+        use DesitinationState::*;
         let (pawn_start, dir): (i8, i8) = match self.piece.color {
             White => (6,-1),
-            Black => (1,1),
+            Black => (1, 1),
         };
-        if self.start_pos[1] == pawn_start {
-            if !matches!(self.board.arr[self.start_pos[0] as usize][3], Some(ColoredPiece{color, piece})) {
-                if !matches!(self.board.arr[self.start_pos[0] as usize][4], Some(ColoredPiece{color, piece})) {
-                    self.moves.push([self.start_pos[0], self.start_pos[1] + 2*dir])
-                }
+        let mut up = [self.start_pos[0] + (1*dir), self.start_pos[1]];
+        match self.get_dst_state(up) {
+            Free => self.moves.push(up),
+            Occupied | OutOfBounds => double = false,
+            Capturable => panic!("capturing forward"),
+        }
+        if double && self.start_pos[1] == pawn_start {
+            up = [up[0] + (1*dir), up[1]];
+            match self.get_dst_state(up) {
+                Free => self.moves.push(up),
+                Occupied | OutOfBounds => {},
+                Capturable => panic!("capturing forward"),
             }
         }
-        else {
-            if !matches!(self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] + dir) as usize], Some(ColoredPiece{color, piece})) {
-                if Board::in_bounds([self.start_pos[0], self.start_pos[1] + dir]) {
-                    self.moves.push([self.start_pos[0], self.start_pos[1] + dir])
-                }
-            }
+        let diag1 = [(self.start_pos[0] + (1*dir)), (self.start_pos[1] - 1)];
+        match self.get_dst_state(diag1) {
+            Free => {},
+            Occupied | OutOfBounds => {},
+            Capturable => self.moves.push(diag1),
         }
-        if !matches!(self.board.arr[(self.start_pos[0] + 1) as usize][(self.start_pos[1] + dir) as usize], Some(ColoredPiece{color, piece})) {
-            if color != self.piece.color {
-                self.moves.push([self.start_pos[0] + 1, self.start_pos[1] + dir])
-            }
-        }
-        else if !matches!(self.board.arr[(self.start_pos[0] - 1) as usize][(self.start_pos[1] + dir) as usize], Some(ColoredPiece{color, piece})) {
-            if color != self.piece.color {
-                self.moves.push([self.start_pos[0] - 1, self.start_pos[1] + dir])
-            }
+        let diag2 = [(self.start_pos[0] + (1*dir)), (self.start_pos[1] + 1)];
+        match self.get_dst_state(diag2) {
+            Free => {},
+            Occupied | OutOfBounds => {},
+            Capturable => self.moves.push(diag2),
         }
     }
-
-    fn get_knightmoves(&self) {
+    fn get_knightmoves(&mut self) {
+        use DesitinationState::*;
         let xvals = [2,2,1,1,-1,-1,-2,-2];
         let yvals = [1,-1,2,-2,2,-2,1,-1];
         for i in 0..7 {
-            if Board::in_bounds([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]]) {
-                if matches!(self.board.arr[(self.start_pos[0] + xvals[i]) as usize][(self.start_pos[1] + yvals[i]) as usize], Some(ColoredPiece{color, piece})) {
-                    if color != self.piece.color {
-                        self.moves.push([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]])
-                    }
-                }
-                else {
-                    self.moves.push([self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]])
-                }
+            let dst = [self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]];
+            match self.get_dst_state(dst) {
+                Free => self.moves.push(dst),
+                Occupied | OutOfBounds => {},
+                Capturable => self.moves.push(dst),
             }
         }
     }
 
-    fn get_linemoves(&self, dirs: &[[i8;2]]) {
+
+    fn get_linemoves(&mut self, dirs: &[[i8;2]]) {
         use DesitinationState::*;
         for dir in dirs {
             for i in 1..7 {
@@ -210,19 +211,19 @@ impl<'a> MoveGenerator<'a> {
     }
     //for changing operators pass parameters as arrays or could pass lamdas
 
-    fn get_bishopmoves(&self) {
+    fn get_bishopmoves(&mut self) {
         self.get_linemoves(&[[1,1],[-1,1],[-1,-1],[1,-1]])
     }
 
-    fn get_rookmoves(&self) {
+    fn get_rookmoves(&mut self) {
         self.get_linemoves(&[[1,0],[-1,0],[0,-1],[0,1]])
     }
 
-    fn get_queenmoves(&self) {
+    fn get_queenmoves(&mut self) {
         self.get_linemoves(&[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]])
     }
 
-    fn get_kingmoves(&self) {
+    fn get_kingmoves(&mut self) {
         use DesitinationState::*;
         let dirs = &[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]];
         for dir in dirs {        
@@ -238,7 +239,7 @@ impl<'a> MoveGenerator<'a> {
         }
     }
 
-    fn get_piece_moves(&self) {
+    fn get_piece_moves(&mut self) {
          match self.piece.piece {
             Pawn => self.get_pawnmoves(),
             Knight => self.get_knightmoves(),
@@ -249,16 +250,16 @@ impl<'a> MoveGenerator<'a> {
         }
     }
     fn get_moves(c: Color, board: &'a Board) {
-        let mut results = Vec::new();
+        let results = Vec::new();
         for i in 0..8_i8 {
             for j in 0..8_i8 {
                 match board.arr[i as usize][j as usize] { //back to match
                     Some(ColoredPiece{color, piece}) if color == c => {
-                        let gen = Self {
+                        let mut gen = Self {
                             board, 
                             start_pos: [i,j], 
                             piece: ColoredPiece{color, piece},
-                            moves: results
+                            moves: results,
                         };
                         gen.get_piece_moves();
                     }
