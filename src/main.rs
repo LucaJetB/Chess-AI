@@ -44,7 +44,10 @@ fn test_basic1() {
         b.print();
         println!("");
     }
-    
+    //write test functions to make sure moves are correct
+    //look at pawns, make sure they can capture and move both squares easily
+    //do some evaluation where the program picks the "best" move to keep the evaluation in its favor
+    //try to evaluate moves within some depth
 }
 
 
