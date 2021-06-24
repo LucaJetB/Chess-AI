@@ -25,29 +25,85 @@ fn test_basic1() {
       P P P P P P P P\n\
       R N B Q K B N R\n\
       ";
+      let board3 = 
+      ". . . . . . . .\n\
+       . . . . . . . .\n\
+       . . . . . . . .\n\
+       . . . . . . . .\n\
+       . . . q . b . .\n\
+       . n . . P . . .\n\
+       P . . . . . . .\n\
+       . . . . . . . .\n\
+       ";
     let b1 = Board::from_str(board1);
     let b2 = Board::from_str(board2);
+    let b3 = Board::from_str(board3);
     dbg!(&b1);
     assert_eq!(b1.arr[0][6], Some(ColoredPiece{color: Black, piece: King}));
     println!("Board 1: ");
-    b1.get_advantage();
+    b1.get_advantage(White);
     println!("");
     println!("Board 2: ");
-    b2.get_advantage();
+    b2.get_advantage(White);
     println!("");
     b1.print();
-    for m in MoveGenerator::get_moves(White, &b1) {
-        let mut b = b1.clone();
+    let best_board = get_best_board(b3, White);
+    best_board.print();
+    let best_board_3 = get_best_board_depth_3(b1, White);
+    best_board_3.print();
+}
+
+fn get_best_board(board: Board, c: Color) -> Board {
+    let mut best_score = board.get_advantage(c);
+    let mut best_board = board.clone();
+    for m in MoveGenerator::get_moves(White, &board) {
+        let mut b = board.clone();
         let p = b.get(m.src);
         b.set(m.dst, p);
         b.set(m.src, None);
+        println!("{:?}", p);
+        println!("{:?}", m.src);
+        println!("{:?}", m.dst);
         b.print();
         println!("");
+
+        if b.get_advantage(White) > best_score {
+            best_score = b.get_advantage(White);
+            best_board = b;
+        }
     }
-    //write test functions to make sure moves are correct
-    //look at pawns, make sure they can capture and move both squares easily
-    //do some evaluation where the program picks the "best" move to keep the evaluation in its favor
-    //try to evaluate moves within some depth
+    println!("{}", best_score);
+    best_board
+}
+
+fn get_best_board_depth_3(board: Board, c: Color) -> Board {
+    let mut best_score = board.get_advantage(c);
+    let mut best_board = board.clone();
+    for m in MoveGenerator::get_moves(c, &board) {
+        let mut depth_1 = board.clone();
+        let p = depth_1.get(m.src);
+        depth_1.set(m.dst, p);
+        depth_1.set(m.src, None);
+        for m in MoveGenerator::get_moves(c.opposite_color(), &depth_1) {
+            let mut depth_2 = board.clone();
+            let p = depth_1.get(m.src);
+            depth_2.set(m.dst, p);
+            depth_2.set(m.src, None);
+            for m in MoveGenerator::get_moves(c, &depth_2) {
+                let mut b = board.clone();
+                let p = b.get(m.src);
+                b.set(m.dst, p);
+                b.set(m.src, None);
+
+                if b.get_advantage(White) > best_score {
+                    best_score = b.get_advantage(White);
+                    best_board = b;
+                }
+            }
+        }  
+    }
+    println!("{}", best_score);
+    best_board
 }
 
 
@@ -194,7 +250,7 @@ impl<'a> MoveGenerator<'a> {
         let dst = [self.start_pos[0] + (1*dir), self.start_pos[1]];
         if matches!(self.get_dst_state(dst), Free) {
             self.add_move(dst);
-            if self.start_pos[1] == pawn_start {
+            if self.start_pos[0] == pawn_start {
                 let dst = [self.start_pos[0] + (2*dir), self.start_pos[1]];
                 if matches!(self.get_dst_state(dst), Free) {
                      self.add_move(dst)
@@ -215,7 +271,7 @@ impl<'a> MoveGenerator<'a> {
         let xvals = [2,2,1,1,-1,-1,-2,-2];
         let yvals = [1,-1,2,-2,2,-2,1,-1];
         for i in 0..7 {
-            let dst = [self.start_pos[0] + xvals[i], self.start_pos[1] + yvals[i]];
+            let dst = [self.start_pos[0] + yvals[i], self.start_pos[1] + xvals[i]];
             if matches!(self.get_dst_state(dst), Free | Capturable) {
                 self.add_move(dst)
             }
@@ -263,6 +319,10 @@ impl<'a> MoveGenerator<'a> {
             }
         }
         //castling (check under attack sqaures)
+        //if king has not moved && rook has not moved
+        //if king has line of sight of rook
+        //if sqaure to kings right/left is not targeted
+        //king can move two square towards rook, rook must be teleported onto other side of king
     }
 
     fn get_piece_moves(&mut self) {
@@ -347,7 +407,7 @@ impl Board {
         self.arr[pos[0] as usize][pos[1] as usize] = p;
     }
 
-    fn get_advantage(&self) {
+    fn get_advantage(&self, c: Color) -> i32 {
         let mut white_score = 0;
         let mut black_score = 0;
         for i in 0..8{
@@ -369,6 +429,13 @@ impl Board {
         }
         else {
             println!("Black has advantage"); 
+        }
+
+        if c == White {
+            white_score - black_score
+        }
+        else {
+            black_score - white_score
         }
     }
 
