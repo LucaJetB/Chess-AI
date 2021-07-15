@@ -1,8 +1,40 @@
 #![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables))]
+mod board;
+mod move_generator;
+
+use crate::board::{Board, ColoredPiece, Color, Piece};
+use move_generator::*;
+use Color::*; 
+use Piece::*;
+use ::std::*;
+use std::io::{self, Read};
 fn main() {
+    let board1= 
+    "r n b q k b n r\n\
+     p p p p p p p p\n\
+     . . . . . . . .\n\
+     . . . . . . . .\n\
+     . . . . . . . .\n\
+     . . . . . . . .\n\
+     P P P P P P P P\n\
+     R N B Q K B N R\n\
+     ";
+     let white_king = ColoredPiece {
+        color: White,
+        piece: King,
+    };
+    let b1 = Board::from_str(board1);
+    let mut buff = String::new();
+    let mut stdin = io::stdin();
+    stdin.read_to_string(&mut buff).expect("error");
+    println!("{}",buff); 
+    let c = '8';
+    let num = c as i32 - 0x30;
+    println!("{}", num);
+    //play(b1); 
 }
-//TODO add values to pieces
-//tally total value for a given color
+// TODO use UCI/any protocal to interact with engine and get an UI
+// write a to_FEN func for boards use a few tests, write a from_FEN func as well
 #[test] 
 fn test_basic1() {
     let board1 = 
@@ -41,22 +73,27 @@ fn test_basic1() {
     dbg!(&b1);
     assert_eq!(b1.arr[0][6], Some(ColoredPiece{color: Black, piece: King}));
     println!("Board 1: ");
-    b1.get_advantage(White);
+    b1.get_advantage_print(White);
     println!("");
     println!("Board 2: ");
-    b2.get_advantage(White);
+    b2.get_advantage_print(White);
     println!("");
     b1.print();
-    let best_board = get_best_board(b3, White);
+    let best_board = get_next_move(&b1, Black);
     best_board.print();
-    let best_board_3 = get_best_board_depth_3(b1, White);
-    best_board_3.print();
+    println!("\n");
+    let fen = b2.to_fen();
+    println!("{}", fen);
+   // let best_board = get_best_board(&b1, White, 2);
+   // best_board.print();
+    let from_fen = Board::from_fen(fen);
+    from_fen.print();
 }
 
-fn get_best_board(board: Board, c: Color) -> Board {
+fn get_next_move(board: &Board, c: Color) -> Board {
     let mut best_score = board.get_advantage(c);
     let mut best_board = board.clone();
-    for m in MoveGenerator::get_moves(White, &board) {
+    for m in MoveGenerator::get_moves(c, &board) {
         let mut b = board.clone();
         let p = b.get(m.src);
         b.set(m.dst, p);
@@ -67,376 +104,122 @@ fn get_best_board(board: Board, c: Color) -> Board {
         b.print();
         println!("");
 
-        if b.get_advantage(White) > best_score {
-            best_score = b.get_advantage(White);
+        if b.get_advantage(c) > best_score {
+            best_score = b.get_advantage(c);
             best_board = b;
         }
     }
-    println!("{}", best_score);
     best_board
 }
 
-fn get_best_board_depth_3(board: Board, c: Color) -> Board {
-    let mut best_score = board.get_advantage(c);
+fn get_best_board(board: &Board, c: Color, depth: i8) -> Board {
     let mut best_board = board.clone();
-    for m in MoveGenerator::get_moves(c, &board) {
-        let mut depth_1 = board.clone();
-        let p = depth_1.get(m.src);
-        depth_1.set(m.dst, p);
-        depth_1.set(m.src, None);
-        for m in MoveGenerator::get_moves(c.opposite_color(), &depth_1) {
-            let mut depth_2 = board.clone();
-            let p = depth_1.get(m.src);
-            depth_2.set(m.dst, p);
-            depth_2.set(m.src, None);
-            for m in MoveGenerator::get_moves(c, &depth_2) {
-                let mut b = board.clone();
-                let p = b.get(m.src);
-                b.set(m.dst, p);
-                b.set(m.src, None);
-
-                if b.get_advantage(White) > best_score {
-                    best_score = b.get_advantage(White);
-                    best_board = b;
-                }
-            }
-        }  
+    if depth == 0 {
+        return best_board
     }
-    println!("{}", best_score);
+    for m in MoveGenerator::get_moves(c, board) {
+        let mut b = board.clone();
+        let p = b.get(m.src);
+        b.set(m.dst, p);
+        b.set(m.src, None);
+        let b_copy = b.clone();
+        b = get_next_move(&b, c.opposite_color());
+        let test_board = get_best_board(&b, c, depth-1);
+        if test_board.get_advantage(c) > best_board.get_advantage(c) {
+            best_board = b_copy;
+        }
+    }
     best_board
 }
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Piece {
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
-}
-
-impl Piece {
-    pub fn get_value(&self) -> i32 {
-        match self {
-            Pawn => 1,
-            Knight => 3,
-            Bishop => 3,
-            Rook => 5,
-            Queen => 9,
-            King => 10000,
-        }
+fn get_user_input() -> String {
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).expect("Error reading stdin");
+    if input.ends_with('\n') {
+        input.pop();
     }
-
+    input
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Color {
-    White,
-    Black,
+/* 
+fn play(mut board: Board) {
+    let white_king = ColoredPiece {
+        color: White,
+        piece: King,
+    };
+    let black_king = ColoredPiece {
+        color: Black,
+        piece: King,
+    };
+    let mut input = String::new();
+    let mut c: Color;
+    board.print();
+    println!("Go first? y/n");
+    input = get_user_input();
+    if input == "y" {
+        while board.find_piece(white_king) && board.find_piece(black_king) {
+            println!("Move: ");
+            input = get_user_input();
 
-}
-
-impl Color {
-    pub fn opposite_color(&self) -> Self {
-        match self {
-            White => Black,
-            Black => White,
-        }
-    }
-}
-
-
-
-use Color::*; 
-use Piece::*;
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct ColoredPiece {
-    color: Color,
-    piece: Piece,
-}
-
-impl ColoredPiece {
-    pub fn from_char(c: char) -> Self {
-        let (color,piece, value) = match c {
-            'P' => (White, Pawn, 1),
-            'N' => (White, Knight, 3),
-            'B' => (White, Bishop, 3),
-            'R' => (White, Rook, 5),
-            'Q' => (White, Queen, 9),
-            'K' => (White, King, 100),
-
-            'p' => (Black, Pawn, 1),
-            'n' => (Black, Knight, 3),
-            'b' => (Black, Bishop, 3),
-            'r' => (Black, Rook, 5),
-            'q' => (Black, Queen, 9),
-            'k' => (Black, King, 100),
-
-            _ => panic!("You fucked up"),
-        };
-        Self {color, piece}
-    }
-    fn to_char(&self) -> char {
-        match (self.color,self.piece) {
-            (White, Pawn) => 'P',
-            (White, Knight) => 'N',
-            (White, Bishop) => 'B',
-            (White, Rook) => 'R',
-            (White, Queen) => 'Q',
-            (White, King) => 'K',
-            (Black, Pawn) => 'p',
-            (Black, Knight) => 'n',
-            (Black, Bishop) => 'b',
-            (Black, Rook) => 'r',
-            (Black, Queen) => 'q',
-            (Black, King) => 'k',
-        }
-    }
-
-
-}
- // create pos as a struct or tuple for easy arithmetic funcs on it
- //
- #[derive(Debug)]
-struct Move {
-    src: [i8; 2],
-    dst: [i8; 2],
-}
-
-
-#[derive(Debug)]
-struct MoveGenerator<'a> {
-    board: &'a Board,
-    start_pos: [i8;2],
-    piece: ColoredPiece,
-    moves: &'a mut Vec<Move>, //if this contains all moves should it be in this struct with piece specfic values?
-}
-
-enum DesitinationState {
-    Free,
-    Occupied,
-    Capturable,
-    OutOfBounds,
-}
-
-impl<'a> MoveGenerator<'a> {
-    fn add_move(&mut self, dst: [i8;2]) {
-        let m = Move {
-            src: self.start_pos,
-            dst
-        };
-        self.moves.push(m);
-    }
-
-    fn get_dst_state(&self, pos: [i8;2]) -> DesitinationState {
-        use DesitinationState::*;
-        if !Board::in_bounds(pos) {
-            return OutOfBounds;
-        }
-        match self.board.get(pos) {
-            Some(ColoredPiece {color, ..}) if color != self.piece.color => Capturable,
-            Some(_) => Occupied,
-            None => Free,
-        }
-    }
-
-    fn get_pawnmoves(&mut self) { 
-        use DesitinationState::*;
-        let (pawn_start, dir): (i8, i8) = match self.piece.color {
-            White => (6,-1),
-            Black => (1, 1),
-        };
-        let dst = [self.start_pos[0] + (1*dir), self.start_pos[1]];
-        if matches!(self.get_dst_state(dst), Free) {
-            self.add_move(dst);
-            if self.start_pos[0] == pawn_start {
-                let dst = [self.start_pos[0] + (2*dir), self.start_pos[1]];
-                if matches!(self.get_dst_state(dst), Free) {
-                     self.add_move(dst)
-                }
+            //e4
+            let src = get_move(&white_src);
+            println!("Move to: ");
+            io::stdin().read_line(&mut input).expect("Error");
+            let dst = get_move(&white_dst);
+            let player_move = Move {
+                src,
+                dst,
+            };
+            if !is_valid_move(&player_move, &board, White) {
+                println!("Error invalid move");
+                continue;
             }
+            else {
+                let p = board.get(player_move.src);
+                board.set(player_move.dst, p);
+                board.set(player_move.src, None);
+                board.print();
+            }
+            board = get_best_board_depth_3(board, Black);
+            board.print();
         }
-        for hdir in &[-1,1] {
-            let dst = [(self.start_pos[0] + (1*dir)), (self.start_pos[1] + *hdir)];
-            if matches!(self.get_dst_state(dst), Capturable) {
-                self.add_move(dst)
-            } 
-        }
-        // TODO en passant
     }
+    else {
+        board = get_best_board_depth_3(board, Black);
+        while board.find_piece(white_king) && board.find_piece(black_king) {
+            println!("Piece to move: ");
+            io::stdin().read_line(&mut input).expect("Error");
+            let src = get_move(&input);
+            println!("Move to: ");
+            io::stdin().read_line(&mut input).expect("Error");
+            let dst = get_move(&input);
+            let player_move = Move {
+                src,
+                dst,
+            };
+            if !is_valid_move(&player_move, &board, Black) {
+                println!("Error invalid move");
+                continue;
+            }
+            else {
+                let p = board.get(player_move.src);
+                board.set(player_move.dst, p);
+                board.set(player_move.src, None);
+                board.print();
+            }
+            board = get_best_board_depth_3(board, Black);
+            board.print();
+        }
+    }       
+}
 
-    fn get_knightmoves(&mut self) {
-        use DesitinationState::*;
-        let xvals = [2,2,1,1,-1,-1,-2,-2];
-        let yvals = [1,-1,2,-2,2,-2,1,-1];
-        for i in 0..7 {
-            let dst = [self.start_pos[0] + yvals[i], self.start_pos[1] + xvals[i]];
-            if matches!(self.get_dst_state(dst), Free | Capturable) {
-                self.add_move(dst)
+fn is_valid_move(m_to_check: &Move, b: &Board, c: Color) -> bool {
+    for m in MoveGenerator::get_moves(c, &b) {
+        if m.src == m_to_check.src {
+            if m.dst == m_to_check.dst {
+                true;
             }
         }
     }
-
-
-    fn get_linemoves(&mut self, dirs: &[[i8;2]]) {
-        use DesitinationState::*;
-        for dir in dirs {
-            for i in 1..7 {
-                let dst = [self.start_pos[0] + (i*dir[0]), self.start_pos[1] + (i*dir[1])];
-                match self.get_dst_state(dst) {
-                    Free => self.add_move(dst),
-                    Occupied | OutOfBounds => break,
-                    Capturable => {
-                        self.add_move(dst);
-                        break
-                    }
-                }
-            }
-        }
-    }
-    //for changing operators pass parameters as arrays or could pass lamdas
-
-    fn get_bishopmoves(&mut self) {
-        self.get_linemoves(&[[1,1],[-1,1],[-1,-1],[1,-1]])
-    }
-
-    fn get_rookmoves(&mut self) {
-        self.get_linemoves(&[[1,0],[-1,0],[0,-1],[0,1]])
-    }
-
-    fn get_queenmoves(&mut self) {
-        self.get_linemoves(&[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]])
-    }
-
-    fn get_kingmoves(&mut self) {
-        use DesitinationState::*;
-        let dirs = &[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]];
-        for dir in dirs {        
-            let dst = [self.start_pos[0] + (dir[0]), self.start_pos[1] + (dir[1])];
-            if matches!(self.get_dst_state(dst), Free | Capturable) {
-                self.add_move(dst);
-            }
-        }
-        //castling (check under attack sqaures)
-        //if king has not moved && rook has not moved
-        //if king has line of sight of rook
-        //if sqaure to kings right/left is not targeted
-        //king can move two square towards rook, rook must be teleported onto other side of king
-    }
-
-    fn get_piece_moves(&mut self) {
-         match self.piece.piece {
-            Pawn => self.get_pawnmoves(),
-            Knight => self.get_knightmoves(),
-            Bishop => self.get_bishopmoves (),
-            Rook => self.get_rookmoves(),
-            Queen => self.get_queenmoves(),
-            King => self.get_kingmoves(),
-        }
-    }
-    
-    fn get_moves(c: Color, board: &'a Board) -> Vec<Move> {
-        movegen_get_moves(c,board)
-    }
+    false
 }
-// TODO prune some illegal moves with castling (only going to be 1 square else lose the game) 
-fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> { 
-    let mut results = Vec::new();
-    for i in 0..8_i8 {
-        for j in 0..8_i8 {
-            match board.arr[i as usize][j as usize] { // ifmatch!
-                Some(ColoredPiece{color, piece}) if color == c => {
-                    let mut gen = MoveGenerator {
-                        board, 
-                        start_pos: [i,j], 
-                        piece: ColoredPiece{color, piece},
-                        moves: &mut results,
-                    };
-                    gen.get_piece_moves();
-
-                }
-                _ => {}
-           }
-        }
-    }
-    results
-}
-
-#[derive(Debug, Clone)]
-struct Board {
-     arr: [[Option<ColoredPiece>; 8]; 8],
-}
-
-
-impl Board {
-    fn from_str(sboard: &str) -> Self {
-        assert!(sboard.len() == 8*16);
-        let sboard: Vec<_> = sboard.chars().collect();
-        let mut board = [[None; 8]; 8];
-        for i in 0..8 {
-            for j in 0..8 {
-                let index = 16*i + 2*j;
-                if sboard[index] != '.' {
-                    board[i][j] = Some(ColoredPiece::from_char(sboard[index]))
-                }
-            }
-        }
-        Self {arr: board}
-    }
-    fn print(&self) {
-        for i in 0..8 {
-            for j in 0..8 {
-                match self.arr[i][j] {
-                    Some(p) => print!("{} ", p.to_char()),
-                    None => print!(". "),
-                }
-            }
-            println!()
-        }        
-    }
-
-    pub fn in_bounds(pos: [i8;2]) -> bool {
-        matches!(pos, [0..=7,0..=7])
-    }
-
-    pub fn get(&self, pos: [i8; 2]) -> Option<ColoredPiece> {
-        self.arr[pos[0] as usize][pos[1] as usize]
-    }
-    pub fn set(&mut self, pos: [i8; 2], p: Option<ColoredPiece>) {
-        self.arr[pos[0] as usize][pos[1] as usize] = p;
-    }
-
-    fn get_advantage(&self, c: Color) -> i32 {
-        let mut white_score = 0;
-        let mut black_score = 0;
-        for i in 0..8{
-            for j in 0..8 {
-                match self.arr[i][j] {
-                    Some(ColoredPiece{color: White, piece}) => white_score += piece.get_value(),
-                    Some(ColoredPiece{color: Black, piece}) => black_score += piece.get_value(),
-                    None => {},
-                    }
-            }     
-        }
-        println!("Whites score is {}", white_score);
-        println!("Blacks score is {}", black_score);
-        if white_score == black_score {
-            println!("Material is equal");
-        }
-        else if white_score > black_score {
-            println!("White has advantage");
-        }
-        else {
-            println!("Black has advantage"); 
-        }
-
-        if c == White {
-            white_score - black_score
-        }
-        else {
-            black_score - white_score
-        }
-    }
-
-}
+*/
