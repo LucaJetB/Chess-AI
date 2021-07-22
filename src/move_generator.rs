@@ -1,3 +1,5 @@
+use std::thread::park_timeout;
+
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use Color::*;
 use Piece::*;
@@ -20,6 +22,7 @@ pub enum DesitinationState {
     Capturable,
     OutOfBounds,
 }
+
 
 impl<'a> MoveGenerator<'a> {
     pub fn add_move(&mut self, dst: [i8;2]) {
@@ -140,6 +143,9 @@ impl<'a> MoveGenerator<'a> {
     pub fn get_moves(c: Color, board: &'a Board) -> Vec<Move> {
         movegen_get_moves(c,board)
     }
+    pub fn get_all_moves(board: &'a Board) -> Vec<Move> {
+        movegen_get_all_moves(board)
+    }
 }
 // TODO prune some illegal moves with castling (only going to be 1 square else lose the game) 
 pub fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> { 
@@ -148,6 +154,28 @@ pub fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> {
         for j in 0..8_i8 {
             match board.arr[i as usize][j as usize] { // ifmatch!
                 Some(ColoredPiece{color, piece}) if color == c => {
+                    let mut gen = MoveGenerator {
+                        board, 
+                        start_pos: [i,j], 
+                        piece: ColoredPiece{color, piece},
+                        moves: &mut results,
+                    };
+                    gen.get_piece_moves();
+
+                }
+                _ => {}
+           }
+        }
+    }
+    results
+}
+
+pub fn movegen_get_all_moves(board: &Board) -> Vec<Move> { 
+    let mut results = Vec::new();
+    for i in 0..8_i8 {
+        for j in 0..8_i8 {
+            match board.arr[i as usize][j as usize] { // ifmatch!
+                Some(ColoredPiece{color, piece}) => {
                     let mut gen = MoveGenerator {
                         board, 
                         start_pos: [i,j], 

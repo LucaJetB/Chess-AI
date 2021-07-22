@@ -2,7 +2,7 @@
 mod board;
 mod move_generator;
 
-use crate::board::{Board, ColoredPiece, Color, Piece};
+use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use move_generator::*;
 use Color::*; 
 use Piece::*;
@@ -23,15 +23,14 @@ fn main() {
         color: White,
         piece: King,
     };
-    let b1 = Board::from_str(board1);
-    let mut buff = String::new();
-    let mut stdin = io::stdin();
-    stdin.read_to_string(&mut buff).expect("error");
-    println!("{}",buff); 
-    let c = '8';
-    let num = c as i32 - 0x30;
-    println!("{}", num);
-    //play(b1); 
+    let b1 = Board::from_str(board1, White);
+    let m = Move::chess_notation_to_move("e7e5");
+    m.print();
+    let v = MoveGenerator::get_all_moves(&b1);
+    for i in  v {
+        i.print();
+    }
+    uci_setup();
 }
 // TODO use UCI/any protocal to interact with engine and get an UI
 // write a to_FEN func for boards use a few tests, write a from_FEN func as well
@@ -67,9 +66,22 @@ fn test_basic1() {
        P . . . . . . .\n\
        . . . . . . . .\n\
        ";
-    let b1 = Board::from_str(board1);
-    let b2 = Board::from_str(board2);
-    let b3 = Board::from_str(board3);
+       let board4 = 
+       "♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖\n\
+        ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙\n\
+        . . . . . . . .\n\
+        . . . . . . . .\n\
+        . . . . . . . .\n\
+        . . . . . . . .\n\
+        ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟\n\
+        ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜\n\
+        ";
+    let b1 = Board::from_str(board1, White);
+    let b2 = Board::from_str(board2, White);
+    let b3 = Board::from_str(board3, White);
+    //let b4 = Board::from_str_piece(board4, White);
+    let b4 = Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+    b4.print();
     dbg!(&b1);
     assert_eq!(b1.arr[0][6], Some(ColoredPiece{color: Black, piece: King}));
     println!("Board 1: ");
@@ -79,7 +91,7 @@ fn test_basic1() {
     b2.get_advantage_print(White);
     println!("");
     b1.print();
-    let best_board = get_next_move(&b1, Black);
+    let best_board = get_best_move(&b1, Black);
     best_board.print();
     println!("\n");
     let fen = b2.to_fen();
@@ -90,7 +102,129 @@ fn test_basic1() {
     from_fen.print();
 }
 
-fn get_next_move(board: &Board, c: Color) -> Board {
+pub fn uci_setup() -> &'static str {
+    let s = get_user_input();
+    match &s[..] {
+        "uci" => {
+            println!("uciok");
+            return "uciok"
+        }
+        "isready" => {
+            println!("readyok");
+            return "readyok";       
+        }
+        "ucinewgame" => {
+            print_new_game();
+            uci_play();
+            return "ucinewgame";
+        }
+        _ => {
+            return "";
+        }
+    }   
+}
+
+pub fn first_word(s: &String) -> usize {
+    let bytes = s.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return i;
+        }
+    }
+
+    s.len()
+}
+
+pub fn uci_play() {
+    let s = get_user_input();
+    let word = first_word(&s);
+    match &s[0..word] {
+        "quit" => {
+            return;
+        }
+        "position" => {
+            uci_position(s);
+        }
+        _ => {
+            println!("Unrecognized command");
+            return;
+        }
+
+    }
+}
+
+pub fn uci_position(mut s: String) { 
+    let pos = first_word(&s);
+    let b: Board;
+    for i in 0..pos+1 {
+        s.remove(0);
+    }
+    let board = first_word(&s);
+    match &s[0..board] {
+        "startpos" => {
+            for i in 0..board+1 {
+                s.remove(0);
+            }
+            b = Board::new_board();
+        }
+
+        "fen" => {
+            for i in 0..board+1 {
+                s.remove(0);
+            }
+            b = Board::parse_fen(&s); 
+        }
+        _ => {
+            println!("bad input");
+            return;
+        }
+    }
+    uci_moves(s, b);
+
+}
+
+pub fn uci_moves(mut s: String, b: Board) {
+    let pos = first_word(&s);
+    if &s[0..pos] != "moves" {
+        b.print();
+        return;
+    }
+    for i in 0..pos+1 {
+        s.remove(0);
+    }
+    let moves: Vec<Move> = Move::parse_moves(s);
+    play_uci_moves(b, moves);
+}
+
+fn play_uci_moves(mut b: Board, moves: Vec<Move>) {
+    let b_copy = b.clone();
+    for check_m in moves {
+        let mut legal = false;
+        for m in MoveGenerator::get_all_moves(&b_copy) {
+            if m.same_as(&check_m) {
+                legal = true;
+                b = Board::play_move(b, m);
+            }
+        }
+        if legal == false {
+            check_m.print();
+            println!("illegal move");
+            return;
+        }
+    }
+
+    b.print();
+}
+
+
+pub fn print_new_game() {
+    let b = Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+    b.print();
+    println!("Side: {}",b.m.to_str());
+}
+
+fn get_best_move(board: &Board, c: Color) -> Board {
     let mut best_score = board.get_advantage(c);
     let mut best_board = board.clone();
     for m in MoveGenerator::get_moves(c, &board) {
@@ -123,7 +257,7 @@ fn get_best_board(board: &Board, c: Color, depth: i8) -> Board {
         b.set(m.dst, p);
         b.set(m.src, None);
         let b_copy = b.clone();
-        b = get_next_move(&b, c.opposite_color());
+        b = get_best_move(&b, c.opposite_color());
         let test_board = get_best_board(&b, c, depth-1);
         if test_board.get_advantage(c) > best_board.get_advantage(c) {
             best_board = b_copy;

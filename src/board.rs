@@ -1,15 +1,33 @@
 #[derive(Debug, Clone)]
 pub struct Board {
     pub arr: [[Option<ColoredPiece>; 8]; 8],
-    //who's move
-    //who can castle
+    pub m: Color,
+    //who can castle? everyone
+    //en passant available?
     
 }
 
 
 impl Board {
 
-   pub fn to_fen(&self) -> String {
+    pub fn play_move(mut self, m: Move) -> Self {
+        let p = self.get(m.src);
+        self.set(m.dst, p);
+        self.set(m.src, None);
+        self
+    }
+    pub fn new_board() -> Self {
+        Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
+    }
+
+    pub fn parse_fen(s: &String) -> Self {
+        let pos = first_word(&s);
+        let fen_str = &s[1..pos-1];
+        let fen = String::from(fen_str);
+        Board::from_fen(fen)
+    }
+
+    pub fn to_fen(&self) -> String {
        let mut fen = String::new();
        let mut counter: i8 = 0;
        for i in 0..8 {
@@ -33,16 +51,33 @@ impl Board {
            }
            fen.push_str("/");
        }
+       fen.push_str(" ");
+       fen.push_str(self.m.to_str());
+       fen.push_str(" - -");
        fen
-   } 
+    } 
 
-   pub fn from_fen(fen_str: String) -> Self {
+    pub fn from_fen(fen_str: String) -> Self {
        let fen = String::new();
        let counter: i8 = 0;
        let mut b = [[None; 8]; 8];
        let mut x: usize = 0;
        let mut y: usize = 0; 
+       let mut m: Color = White;
+       let mut end = false;
        for c in fen_str.chars() {
+           if c == ' ' {
+               end = true;
+               continue;
+           }
+           if c == 'w' && end  {
+               m = White;
+               break;
+           }
+           if c == 'b' && end {
+               m = Black;
+               break;
+           }
            if c == '/' {
                y = y+1;
                x = 0;
@@ -59,11 +94,12 @@ impl Board {
                x = x + 1;
            }
        }
-       Self {arr: b}
-   }
+
+       Self {arr: b, m}
+    }
 
 
-   pub fn find_piece(&self, look: ColoredPiece) -> bool{
+    pub fn find_piece(&self, look: ColoredPiece) -> bool{
        for i in 0..8 {
            for j in 0..8 {
                match self.arr[i][j] {
@@ -77,9 +113,9 @@ impl Board {
                }
        }
        false
-   }
+    }
 
-   pub fn from_str(sboard: &str) -> Self {
+    pub fn from_str(sboard: &str, c: Color) -> Self {
        assert!(sboard.len() == 8*16);
        let sboard: Vec<_> = sboard.chars().collect();
        let mut board = [[None; 8]; 8];
@@ -91,13 +127,30 @@ impl Board {
                }
            }
        }
-       Self {arr: board}
-   }
+       Self {arr: board, m: c}
+    }
+
+   pub fn from_str_piece(sboard: &str, c: Color) -> Self {
+    let sboard: Vec<_> = sboard.chars().collect();
+    let mut board = [[None; 8]; 8];
+    for i in 0..8 {
+        for j in 0..8 {
+            let index = 16*i + 2*j;
+            if sboard[index] != '.' {
+                let s = sboard[index].to_string();
+                let p = &s[..];
+                println!("{}", p);
+                board[i][j] = Some(ColoredPiece::from_piece_str(p))
+            }
+        }
+    }
+    Self {arr: board, m: c}
+}
    pub fn print(&self) {
        for i in 0..8 {
            for j in 0..8 {
                match self.arr[i][j] {
-                   Some(p) => print!("{} ", p.to_char()),
+                   Some(p) => print!("{} ", p.to_piece()),
                    None => print!(". "),
                }
            }
@@ -172,13 +225,41 @@ impl Board {
 
 use Color::*; 
 use Piece::*;
+
+use crate::first_word;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ColoredPiece {
     pub color: Color,
     pub piece: Piece,
 }
+/*                                                      8  ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  7  ♟︎ ♟︎ ♟︎ ♟︎ ♟︎ ♟︎ ♟︎ ♟︎'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  6  . . . . . . . .'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  5  . . . . . . . .'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  4  . . . . . . . .'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  3  . . . . . . . .'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  2  ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙'
+<UciProtocol (pid=35959)>: Unexpected engine output: '  1  ♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖'
+ */
 
 impl ColoredPiece {
+
+    pub fn to_piece(&self) -> &str {
+        match (self.color, self.piece) {
+            (White, Pawn) => "♟︎",
+            (White, Knight) => "♞",
+            (White, Bishop) => "♝",
+            (White, Rook) => "♜",
+            (White, Queen) => "♛",
+            (White, King) => "♚",
+            (Black, Pawn) => "♙",
+            (Black, Knight) => "♘",
+            (Black, Bishop) => "♗",
+            (Black, Rook) => "♖",
+            (Black, Queen) => "♕",
+            (Black, King) => "♔",
+        }
+    }
     pub fn from_char(c: char) -> Self {
         let (color,piece, value) = match c {
             'P' => (White, Pawn, 1),
@@ -202,6 +283,31 @@ impl ColoredPiece {
         };
         Self {color, piece}
     }
+
+    pub fn from_piece_str(p: &str) -> Self {
+        let (color,piece, value) = match p {
+            "♟︎" => (White, Pawn, 1),
+            "♞" => (White, Knight, 3),
+            "♝" => (White, Bishop, 3),
+            "♜" => (White, Rook, 5),
+            "♛" => (White, Queen, 9),
+            "♚" => (White, King, 100),
+
+            "♙" => (Black, Pawn, 1),
+            "♘" => (Black, Knight, 3),
+            "♗" => (Black, Bishop, 3),
+            "♖" => (Black, Rook, 5),
+            "♕" => (Black, Queen, 9),
+            "♔" => (Black, King, 100),
+
+            _ =>  {
+                println!("{}", p);
+                panic!("You fucked up 2")
+            }
+        };
+        Self {color, piece}
+    }
+
     fn to_char(&self) -> char {
         match (self.color,self.piece) {
             (White, Pawn) => 'P',
@@ -252,6 +358,12 @@ impl Color {
             Black => White,
         }
     }
+    pub fn to_str(&self) -> &str {
+        match self {
+            White => "w",
+            Black => "b",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -278,22 +390,61 @@ impl Piece {
 
 }
 
+
+
 #[derive(Debug)]
 pub struct Move {
     pub src: [i8; 2],
     pub dst: [i8; 2],
 }
-/* 
-impl Move {
-    pub fn from_str(m: &str) -> Move { //e3f6
-        if let [x1, y1, x2, y2] = *m.chars().collect::<Vec<_>>() {
 
-        }
+impl Move {
+    pub fn print(&self) {
+        println!("({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1]);
     }
-    pub fn char_to_loc(c:char) -> i8 {
-        match c {
-            
+    pub fn same_as(&self, m: &Move) -> bool {
+        if self.src == m.src {
+            if self.dst == m.dst {
+                return true
+            }
         }
+        false
+    }
+    pub fn parse_move_str(m: &str) -> [i8;2] {
+        let mut arr: [i8;2] = [-1,-1];
+        match &m[0..1] { 
+            "a" => arr[1] = 0,
+            "b" => arr[1] = 1,
+            "c" => arr[1] = 2,
+            "d" => arr[1] = 3,
+            "e" => arr[1] = 4,
+            "f" => arr[1] = 5,
+            "g" => arr[1] = 6,
+            "h" => arr[1] = 7,
+            _ => panic!("invalid move"),
+        }
+        let num: i8 = m[1..2].parse().unwrap();
+        arr[0] = num-1;
+        arr
+    }
+
+    pub fn chess_notation_to_move(m: &str) -> Self {
+        let first_half = &m[0..2];
+        let second_half = &m[2..4];
+        let s = Move::parse_move_str(first_half);
+        let d = Move::parse_move_str(second_half);
+        return Self {src: s, dst: d}
+    }
+
+    pub fn parse_moves(m: String) -> Vec<Self> {
+        println!("{}", m);
+        let s = &m[..];
+        let v: Vec<&str> = s.split(' ').collect();
+        let mut moves: Vec<Move> = Vec::new();
+        for i in v {
+            //Move::chess_notation_to_move(s).print();
+            moves.push(Move::chess_notation_to_move(s));
+        }
+        moves
     }
 }
-*/
