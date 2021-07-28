@@ -2,11 +2,23 @@
 pub struct Board {
     pub arr: [[Option<ColoredPiece>; 8]; 8],
     pub m: Color,
+    pub last_move: Option<Move>,
     //who can castle? everyone
     //en passant available?
     
 }
 
+pub fn first_word(s: &String) -> usize {
+    let bytes = s.as_bytes();
+
+    for (i, &item) in bytes.iter().enumerate() {
+        if item == b' ' {
+            return i;
+        }
+    }
+
+    s.len()
+}
 
 impl Board {
 
@@ -14,9 +26,10 @@ impl Board {
         let p = self.get(m.src);
         self.set(m.dst, p);
         self.set(m.src, None);
+        self.last_move = Some(m);
         self
     }
-    pub fn new_board() -> Self {
+    pub fn new() -> Self {
         Board::from_fen(String::from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"))
     }
 
@@ -95,7 +108,7 @@ impl Board {
            }
        }
 
-       Self {arr: b, m}
+       Self {arr: b, m, last_move: None}
     }
 
 
@@ -127,7 +140,7 @@ impl Board {
                }
            }
        }
-       Self {arr: board, m: c}
+       Self {arr: board, m: c, last_move: None}
     }
 
    pub fn from_str_piece(sboard: &str, c: Color) -> Self {
@@ -144,7 +157,7 @@ impl Board {
             }
         }
     }
-    Self {arr: board, m: c}
+    Self {arr: board, m: c, last_move: None}
 }
    pub fn print(&self) {
        for i in 0..8 {
@@ -155,7 +168,8 @@ impl Board {
                }
            }
            println!()
-       }        
+       }
+       println!("Side: {}", self.m.to_str());
    }
 
    pub fn in_bounds(pos: [i8;2]) -> bool {
@@ -201,7 +215,7 @@ impl Board {
        }
    }
    
-   pub fn get_advantage(&self, c: Color) -> i32 { //posibly could go to floating points
+   pub fn get_score(&self, c: Color) -> i32 { //posibly could go to floating points
        let mut white_score = 0;
        let mut black_score = 0;
        for i in 0..8{
@@ -226,7 +240,7 @@ impl Board {
 use Color::*; 
 use Piece::*;
 
-use crate::first_word;
+use crate::move_generator::{MoveGenerator, DesitinationState};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ColoredPiece {
     pub color: Color,
@@ -392,21 +406,40 @@ impl Piece {
 
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Move {
     pub src: [i8; 2],
     pub dst: [i8; 2],
 }
 
 impl Move {
+    pub fn is_legal_move(check: &Move, b: &Board) -> bool {
+        check.print();
+        for m in MoveGenerator::get_all_moves(&b) {
+            m.print();
+            if Move::equal(&check, &m) {
+                return true
+            }
+        }
+        false
+    }
+
+    pub fn print_option(m: Option<Move>) {
+        match m {
+            Some(m1) => {
+                println!("({},{}) ({},{})", m1.src[0], m1.src[1], m1.dst[0], m1.dst[1]);
+            }
+            None => {
+                println!("Error, not a move");
+            }
+        }
+    }
     pub fn print(&self) {
         println!("({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1]);
     }
-    pub fn same_as(&self, m: &Move) -> bool {
-        if self.src == m.src {
-            if self.dst == m.dst {
-                return true
-            }
+    pub fn equal(m1: &Move, m2: &Move) -> bool {
+        if m1.to_string() == m2.to_string() {
+            return true
         }
         false
     }
@@ -424,7 +457,8 @@ impl Move {
             _ => panic!("invalid move"),
         }
         let num: i8 = m[1..2].parse().unwrap();
-        arr[0] = num-1;
+        let fix = 8 - num;
+        arr[0] = fix;
         arr
     }
 
@@ -446,5 +480,10 @@ impl Move {
             moves.push(Move::chess_notation_to_move(s));
         }
         moves
+    }
+
+    pub fn to_string(&self) -> String {
+        let s = format!("({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1]);
+        s
     }
 }
