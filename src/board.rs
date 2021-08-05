@@ -3,9 +3,9 @@ pub struct Board {
     pub arr: [[Option<ColoredPiece>; 8]; 8],
     pub m: Color,
     pub last_move: Option<Move>,
+    pub castling: String,
     //who can castle? everyone
     //en passant available?
-    
 }
 
 pub fn first_word(s: &String) -> usize {
@@ -22,6 +22,23 @@ pub fn first_word(s: &String) -> usize {
 
 impl Board {
 
+    pub fn get_piece_loc(&mut self, piece: ColoredPiece) -> [i8;2] {
+        for i in 0..8 {
+            for j in 0..8 {
+                match self.arr[i][j] {
+                    Some(p) => {
+                        if p.piece == piece.piece {
+                            if p.color == piece.color {
+                                return [i as i8,j as i8];
+                            }
+                        }
+                    },
+                    None => return [-1,-1],
+                }
+            }
+        }
+        return [-1,-1];
+    }
     pub fn play_move(mut self, m: Move) -> Self {
         let p = self.get(m.src);
         self.set(m.dst, p);
@@ -78,17 +95,21 @@ impl Board {
        let mut y: usize = 0; 
        let mut m: Color = White;
        let mut end = false;
+       let mut i = 0;
        for c in fen_str.chars() {
            if c == ' ' {
                end = true;
+               i = i + 1;
                continue;
            }
            if c == 'w' && end  {
                m = White;
+               i = i + 1;
                break;
            }
            if c == 'b' && end {
                m = Black;
+               i = i + 1;
                break;
            }
            if c == '/' {
@@ -106,9 +127,13 @@ impl Board {
                b[y][x] = Some(ColoredPiece::from_char(c));
                x = x + 1;
            }
+           i = i + 1;
        }
+       i = i + 1;
+       let castle_str = &fen_str[i..i+5];
+       let castle = String::from(castle_str);
 
-       Self {arr: b, m, last_move: None}
+       Self {arr: b, m, last_move: None, castling: castle}
     }
 
 
@@ -140,7 +165,7 @@ impl Board {
                }
            }
        }
-       Self {arr: board, m: c, last_move: None}
+       Self {arr: board, m: c, last_move: None, castling: String::from("")}
     }
 
    pub fn from_str_piece(sboard: &str, c: Color) -> Self {
@@ -157,7 +182,7 @@ impl Board {
             }
         }
     }
-    Self {arr: board, m: c, last_move: None}
+    Self {arr: board, m: c, last_move: None, castling: String::from("")}
 }
    pub fn print(&self) {
        for i in 0..8 {
@@ -322,7 +347,7 @@ impl ColoredPiece {
         Self {color, piece}
     }
 
-    fn to_char(&self) -> char {
+    pub fn to_char(&self) -> char {
         match (self.color,self.piece) {
             (White, Pawn) => 'P',
             (White, Knight) => 'N',
@@ -338,7 +363,7 @@ impl ColoredPiece {
             (Black, King) => 'k',
         }
     }
-    fn to_str(&self) -> &str {
+    pub fn to_str(&self) -> &str {
         match (self.color,self.piece) {
             (White, Pawn) => "P",
             (White, Knight) => "N",
@@ -357,7 +382,6 @@ impl ColoredPiece {
 
 
 }
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
     White,
