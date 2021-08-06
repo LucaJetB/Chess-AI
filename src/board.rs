@@ -3,7 +3,7 @@ pub struct Board {
     pub arr: [[Option<ColoredPiece>; 8]; 8],
     pub m: Color,
     pub last_move: Option<Move>,
-    pub castling: String,
+    pub castling: CastlingAbility,
     //who can castle? everyone
     //en passant available?
 }
@@ -39,8 +39,36 @@ impl Board {
         }
         return [-1,-1];
     }
+    pub fn find_castle_rook(&mut self, loc: [i8;2], dir: i8) -> Move {
+        let mut i: i8 = 1;
+        while !matches!(self.arr[loc[0] as usize][(loc[1] + (i*dir)) as usize],Some(ColoredPiece{color, piece: Rook})) {
+            i = i+1;
+        }
+        let num = loc[0];
+        let num2 = i*dir;
+        let fin = num + num2;
+        let s = [loc[0],fin];
+        let d = [loc[0], loc[1] + (dir*-1)];
+        let m = Move {
+            src: s,
+            dst: d,
+        };
+        m
+    }
     pub fn play_move(mut self, m: Move) -> Self {
         let p = self.get(m.src);
+        if matches!(p, Some(ColoredPiece{color, piece: King})) {
+            if (m.src[1] - m.dst[1]).abs() == 2 {
+                let dir = (m.src[1] - m.dst[1]) / 2;
+                let rook = self.find_castle_rook(m.src, dir);
+                let r = self.get(rook.src);
+                self.set(m.dst,p);
+                self.set(m.src, None);
+                self.last_move = Some(m);
+                self.set(rook.dst, r);
+                self.set(rook.src, None);
+            } 
+        }
         self.set(m.dst, p);
         self.set(m.src, None);
         self.last_move = Some(m);
@@ -131,9 +159,9 @@ impl Board {
        }
        i = i + 1;
        let castle_str = &fen_str[i..i+5];
-       let castle = String::from(castle_str);
-
-       Self {arr: b, m, last_move: None, castling: castle}
+       let c = CastlingAbility::from_str(castle_str);
+       //from trait is friend
+       Self {arr: b, m, last_move: None, castling: c}
     }
 
 
@@ -165,7 +193,7 @@ impl Board {
                }
            }
        }
-       Self {arr: board, m: c, last_move: None, castling: String::from("")}
+       Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
 
    pub fn from_str_piece(sboard: &str, c: Color) -> Self {
@@ -182,7 +210,7 @@ impl Board {
             }
         }
     }
-    Self {arr: board, m: c, last_move: None, castling: String::from("")}
+    Self {arr: board, m: c, last_move: None, castling: Default::default()}
 }
    pub fn print(&self) {
        for i in 0..8 {
@@ -261,6 +289,8 @@ impl Board {
    }
 
 }
+
+use std::default;
 
 use Color::*; 
 use Piece::*;
@@ -509,5 +539,48 @@ impl Move {
     pub fn to_string(&self) -> String {
         let s = format!("({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1]);
         s
+    }
+}
+#[derive(Debug, Clone)]
+
+pub struct CastlingAbility  {
+    pub white_kingside: bool,
+    pub white_queenside: bool,
+    pub black_kingside: bool,
+    pub black_queenside: bool,
+}
+
+impl Default for CastlingAbility {
+    fn default() -> Self {
+        Self {
+            white_kingside: true,
+            white_queenside: true,
+            black_kingside: true,
+            black_queenside: true,
+        }
+    }
+}
+
+impl CastlingAbility {
+    pub fn from_str(s: &str) -> Self {
+        let mut c= CastlingAbility {
+            white_kingside: false,
+            white_queenside: false,
+            black_kingside: false,
+            black_queenside: false,
+        };
+        if s.contains("K") {
+            c.white_kingside = true;
+        }
+        if s.contains("Q") {
+            c.white_queenside = true;
+        }
+        if s.contains("k") {
+            c.black_kingside = true;
+        }
+        if s.contains("q") {
+            c.black_queenside = true;
+        }
+        c
     }
 }

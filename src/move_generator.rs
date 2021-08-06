@@ -129,84 +129,65 @@ impl<'a> MoveGenerator<'a> {
         //king can move two square towards rook, rook must be teleported onto other side of king
     }
     
-    pub fn get_castle_dirs(&mut self) -> String {
-        let c = self.piece.color;
-        let s = &self.board.castling[..];
-        let mut can_castle = false;
-        let mut castling = String::from("");
-        match c {
-            White => {
-                if s.contains("K") {
-                    can_castle = true;
-                    castling.push_str("K");
-                }
-                if s.contains("Q") {
-                    can_castle = true;
-                    castling.push_str("Q");
-                }
-            }
-            Black => {
-                if s.contains("k") {
-                    can_castle = true;
-                    castling.push_str("K");
-                }
-                if s.contains("q") {
-                    can_castle = true;
-                    castling.push_str("Q");
-                }
-            }
-        }
-        if !can_castle {
-            return String::from("");
-        }
-        castling
-    }
 
     pub fn get_castle_moves(&mut self) {
-        let res = self.get_castle_dirs();
-        let dirs = &res[..];
-        if dirs == "" {
-            return;
-        }
-        if dirs.contains("K") {
-            let dst = self.get_kingside_castle();
-            if dst[0] != -1 {
-                self.add_move(dst)
+        let c = &self.board.castling;
+        if self.board.m == White {
+            if c.white_kingside {
+                let dst = self.get_kingside_castle();
+                if let Some(m)  = dst {
+                    self.add_move(m)
+                }
+            }
+            if c.white_queenside {
+                let dst = self.get_queenside_castle();
+                if let Some(m)  = dst {
+                    self.add_move(m)
+                }
             }
         }
-        if dirs.contains("Q") {
-            let dst = self.get_queenside_castle();
-            if dst[0] != -1 {
-                self.add_move(dst)
+        else {
+            if c.black_kingside {
+                let dst = self.get_kingside_castle();
+                if let Some(m)  = dst {
+                    self.add_move(m)
+                }
+            }
+            if c.black_queenside {
+                let dst = self.get_queenside_castle();
+                if let Some(m)  = dst {
+                    self.add_move(m)
+                }
             }
         }
+       
     }
 
-    pub fn get_kingside_castle(&mut self) -> [i8;2] {
+    pub fn get_kingside_castle(&mut self) -> Option<[i8;2]> {
         if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] + 1) as usize] == None {
             if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] + 2) as usize] == None {
                 for m in MoveGenerator::get_moves(self.piece.color.opposite_color(), self.board) {
                     if m.dst == [self.start_pos[0], self.start_pos[1] + 1] || m.dst == [self.start_pos[0], self.start_pos[1] + 2] {
-                        return [-1,-1];
+                        return None
                     }
                 }
-                return [self.start_pos[0], self.start_pos[1] + 2]
+                return Some([self.start_pos[0], self.start_pos[1] + 2])
             }
         }
-        [-1,-1]
+        None
     }
-    pub fn get_queenside_castle(&mut self) -> [i8;2] {
+    pub fn get_queenside_castle(&mut self) -> Option<[i8;2]> {
         if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] - 1) as usize] == None {
             if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] - 2) as usize] == None {
                 for m in MoveGenerator::get_moves(self.piece.color.opposite_color(), self.board) {
                     if m.dst == [self.start_pos[0], self.start_pos[1] - 1] || m.dst == [self.start_pos[0], self.start_pos[1] - 2] {
-                        return [-1,-1];
+                        return None
                     }
                 }
-                return [self.start_pos[0], self.start_pos[1] - 2]
+                return Some([self.start_pos[0], self.start_pos[1] - 2])
             }
         }
-        [-1,-1]
+        None
     }
 
     pub fn get_piece_moves(&mut self) {
