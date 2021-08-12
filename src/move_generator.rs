@@ -132,6 +132,9 @@ impl<'a> MoveGenerator<'a> {
 
     pub fn get_castle_moves(&mut self) {
         let c = &self.board.castling;
+        if c.white_kingside | c.white_queenside | c.black_kingside | c.black_queenside {
+            println!("Can castle");
+        }
         if self.board.m == White {
             if c.white_kingside {
                 let dst = self.get_kingside_castle();
@@ -198,6 +201,7 @@ impl<'a> MoveGenerator<'a> {
             Rook => self.get_rookmoves(),
             Queen => self.get_queenmoves(),
             King => {
+                println!("{},{}",self.start_pos[0],self.start_pos[1]);
                 self.get_kingmoves();
                 self.get_castle_moves();
             }
@@ -246,6 +250,7 @@ pub fn movegen_get_all_moves(board: &Board) -> Vec<Move> {
                         piece: ColoredPiece{color, piece},
                         moves: &mut results,
                     };
+                    println!("{},{}", i, j);
                     gen.get_piece_moves();
 
                 }

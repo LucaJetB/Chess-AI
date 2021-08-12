@@ -23,7 +23,23 @@ fn main() {
         color: White,
         piece: King,
     };
-    uci_main();
+    let m1 = Move {
+        src: [7,4],
+        dst: [7,6],
+    };
+    let b1 = Board::from_fen(String::from("r1bqkb1r/ppp2ppp/2np1n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 1"));
+    b1.print();
+    let p = b1.get([7,7]).expect("rook not found");
+    dbg!(p);
+    for m in MoveGenerator::get_all_moves(&b1) {
+        let mut b2 = b1.clone();
+        //m.print();
+        if Move::equal(&m, &m1) {
+            b2 = b2.play_move(m);
+            b2.print();
+        }
+    }
+    //uci_main();
 }
 // TODO use UCI/any protocal to interact with engine and get an UI
 // write a to_FEN func for boards use a few tests, write a from_FEN func as well

@@ -39,28 +39,25 @@ impl Board {
         }
         return [-1,-1];
     }
-    pub fn find_castle_rook(&mut self, loc: [i8;2], dir: i8) -> Move {
-        let mut i: i8 = 1;
-        while !matches!(self.arr[loc[0] as usize][(loc[1] + (i*dir)) as usize],Some(ColoredPiece{color, piece: Rook})) {
-            i = i+1;
+    pub fn find_castle_rook_move(&mut self, king_move: Move) -> Move {
+        match (king_move.src, king_move.dst) {
+            ([0,4], [0,6]) => Move {src: [0,7], dst: [0,5]},
+            ([0,4], [0,2]) => Move {src: [0,0], dst: [0,3]},
+            ([7,4], [7,6]) => Move {src: [7,7], dst: [7,5]},
+            ([7,4], [7,2]) => Move {src: [7,0], dst: [7,3]},
+            _ => panic!("Not a castle move"),
+
         }
-        let num = loc[0];
-        let num2 = i*dir;
-        let fin = num + num2;
-        let s = [loc[0],fin];
-        let d = [loc[0], loc[1] + (dir*-1)];
-        let m = Move {
-            src: s,
-            dst: d,
-        };
-        m
     }
     pub fn play_move(mut self, m: Move) -> Self {
         let p = self.get(m.src);
         if matches!(p, Some(ColoredPiece{color, piece: King})) {
             if (m.src[1] - m.dst[1]).abs() == 2 {
-                let dir = (m.src[1] - m.dst[1]) / 2;
-                let rook = self.find_castle_rook(m.src, dir);
+                let dir = (m.dst[1] - m.src[1]) / 2;
+                let rook = self.find_castle_rook_move(m);
+                if rook.src[0] ==-1 {
+                    return self;
+                }
                 let r = self.get(rook.src);
                 self.set(m.dst,p);
                 self.set(m.src, None);
