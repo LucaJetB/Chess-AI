@@ -20,6 +20,10 @@ pub fn first_word(s: &String) -> usize {
     s.len()
 }
 
+pub fn add(arr1: [i8;2], arr2: [i8;2]) -> [i8;2] {
+    [arr1[0] + arr2[0], arr1[1] + arr2[1]]
+}
+
 impl Board {
 
     pub fn get_piece_loc(&mut self, piece: ColoredPiece) -> [i8;2] {

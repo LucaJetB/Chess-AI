@@ -1,6 +1,6 @@
 use std::thread::park_timeout;
 
-use crate::board::{Board, ColoredPiece, Color, Piece, Move};
+use crate::board::{Board, ColoredPiece, Color, Piece, Move, add};
 use Color::*;
 use Piece::*;
 
@@ -25,6 +25,11 @@ pub enum DesitinationState {
 
 
 impl<'a> MoveGenerator<'a> {
+    pub fn maybe_add_move(&mut self, dst: Option<[i8;2]>) {
+        if let Some(dst) = dst {
+            self.add_move(dst)
+        }
+    }
     pub fn add_move(&mut self, dst: [i8;2]) {
         let m = Move {
             src: self.start_pos,
@@ -132,65 +137,47 @@ impl<'a> MoveGenerator<'a> {
 
     pub fn get_castle_moves(&mut self) {
         let c = &self.board.castling;
-        if c.white_kingside | c.white_queenside | c.black_kingside | c.black_queenside {
-            println!("Can castle");
-        }
-        if self.board.m == White {
+        if self.piece.color == White {
             if c.white_kingside {
                 let dst = self.get_kingside_castle();
-                if let Some(m)  = dst {
-                    self.add_move(m)
-                }
+                self.maybe_add_move(dst);
             }
             if c.white_queenside {
                 let dst = self.get_queenside_castle();
-                if let Some(m)  = dst {
-                    self.add_move(m)
-                }
+                self.maybe_add_move(dst);
             }
         }
         else {
             if c.black_kingside {
                 let dst = self.get_kingside_castle();
-                if let Some(m)  = dst {
-                    self.add_move(m)
-                }
+                self.maybe_add_move(dst);
             }
             if c.black_queenside {
                 let dst = self.get_queenside_castle();
-                if let Some(m)  = dst {
-                    self.add_move(m)
-                }
+                self.maybe_add_move(dst);
             }
         }
-       
+    }
+
+    pub fn get_castle(&mut self, dir: i8) -> Option<[i8;2]> {
+        let p1 = add(self.start_pos, [0,(1*dir)]);
+        let p2 = add(self.start_pos, [0,(2*dir)]);
+        if self.board.get(p1) != None || self.board.get(p2) != None {
+            return None;
+        }
+        for m in MoveGenerator::get_moves(self.piece.color.opposite_color(), self.board) {
+            if m.dst == p1 || m.dst == p2 {
+                return None;
+            }
+        }
+        Some(p2)
     }
 
     pub fn get_kingside_castle(&mut self) -> Option<[i8;2]> {
-        if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] + 1) as usize] == None {
-            if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] + 2) as usize] == None {
-                for m in MoveGenerator::get_moves(self.piece.color.opposite_color(), self.board) {
-                    if m.dst == [self.start_pos[0], self.start_pos[1] + 1] || m.dst == [self.start_pos[0], self.start_pos[1] + 2] {
-                        return None
-                    }
-                }
-                return Some([self.start_pos[0], self.start_pos[1] + 2])
-            }
-        }
-        None
+        self.get_castle(1)
     }
     pub fn get_queenside_castle(&mut self) -> Option<[i8;2]> {
-        if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] - 1) as usize] == None {
-            if self.board.arr[self.start_pos[0] as usize][(self.start_pos[1] - 2) as usize] == None {
-                for m in MoveGenerator::get_moves(self.piece.color.opposite_color(), self.board) {
-                    if m.dst == [self.start_pos[0], self.start_pos[1] - 1] || m.dst == [self.start_pos[0], self.start_pos[1] - 2] {
-                        return None
-                    }
-                }
-                return Some([self.start_pos[0], self.start_pos[1] - 2])
-            }
-        }
-        None
+        self.get_castle(-1)
     }
 
     pub fn get_piece_moves(&mut self) {

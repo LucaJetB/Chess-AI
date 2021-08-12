@@ -111,6 +111,7 @@ fn test_basic1() {
     from_fen.print();
 }
 
+
 pub fn uci_main() {
     loop {
         let s = get_user_input().expect("EOF");
