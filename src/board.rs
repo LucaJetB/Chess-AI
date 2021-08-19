@@ -1,4 +1,5 @@
 use std::default;
+use std::fmt;
 use Color::*;
 use Piece::*;
 use crate::move_generator::{DesitinationState, MoveGenerator};
@@ -116,7 +117,7 @@ impl Board {
         fen.push_str(" ");
         fen.push_str(self.m.to_str());
         fen.push_str(" ");
-        fen.push_str(self.castling.to_str());
+        fen.push_str(&self.castling.to_string());
         fen
     }
 
@@ -566,9 +567,15 @@ impl CastlingAbility {
         dbg!(s, &c);
         c
     }
-
-    pub fn to_str(&self) -> &str {
-        //could do alternate that returns String but with fewer lines
+    /*
+    pub fn to_str(&self) -> String {
+        let mut c = String::with_capacity(4);
+        if self.white_kingside  { c.push('K'); }
+        if self.white_queenside { c.push('Q'); }
+        if self.black_kingside  { c.push('k'); }
+        if self.black_queenside { c.push('q'); }
+        c
+        /*
         match (
             self.white_kingside,
             self.white_queenside,
@@ -592,5 +599,17 @@ impl CastlingAbility {
             (false, false, false, true) => return "q",
             (false, false, false, false) => return "",
         }
+        */
+    }
+    */
+}
+
+impl fmt::Display for CastlingAbility {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.white_kingside  { write!(f, "K")?; }
+        if self.white_queenside { write!(f, "Q")?; }
+        if self.black_kingside  { write!(f, "k")?; }
+        if self.black_queenside { write!(f, "q")?; }  
+        Ok(())
     }
 }
