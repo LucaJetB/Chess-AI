@@ -4,16 +4,12 @@ use crate::board::{Board, ColoredPiece, Color, Piece, Move, add};
 use Color::*;
 use Piece::*;
 
-// create pos as a struct or tuple for easy arithmetic funcs on it
- //
-
-
 #[derive(Debug)]
 pub struct MoveGenerator<'a> {
     pub board: &'a Board,
     pub start_pos: [i8;2],
     pub piece: ColoredPiece,
-    pub moves: &'a mut Vec<Move>, //if this contains all moves should it be in this struct with piece specfic values?
+    pub moves: &'a mut Vec<Move>,
 }
 
 pub enum DesitinationState {
@@ -104,8 +100,6 @@ impl<'a> MoveGenerator<'a> {
             }
         }
     }
-    //for changing operators pass parameters as arrays or could pass lamdas
-    //rook must be teleported onto other side of king
     pub fn get_bishopmoves(&mut self) {
         self.get_linemoves(&[[1,1],[-1,1],[-1,-1],[1,-1]])
     }
@@ -127,11 +121,6 @@ impl<'a> MoveGenerator<'a> {
                 self.add_move(dst);
             }
         }
-        //castling (check under attack sqaures)
-        //if king has not moved && rook has not moved
-        //if king has line of sight of rook
-        //if sqaure to kings right/left is not targeted
-        //king can move two square towards rook, rook must be teleported onto other side of king
     }
     
 
@@ -146,8 +135,7 @@ impl<'a> MoveGenerator<'a> {
                 let dst = self.get_queenside_castle();
                 self.maybe_add_move(dst);
             }
-        }
-        else {
+        } else {
             if c.black_kingside {
                 let dst = self.get_kingside_castle();
                 self.maybe_add_move(dst);
@@ -159,7 +147,7 @@ impl<'a> MoveGenerator<'a> {
         }
     }
 
-    pub fn get_castle(&mut self, dir: i8) -> Option<[i8;2]> {
+    pub fn get_castle(&mut self, dir: i8) -> Option<[i8;2]> { 
         let p1 = add(self.start_pos, [0,(1*dir)]);
         let p2 = add(self.start_pos, [0,(2*dir)]);
         if self.board.get(p1) != None || self.board.get(p2) != None {
@@ -202,7 +190,6 @@ impl<'a> MoveGenerator<'a> {
         movegen_get_all_moves(board)
     }
 }
-// TODO prune some illegal moves with castling (only going to be 1 square else lose the game) 
 pub fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> { 
     let mut results = Vec::new();
     for i in 0..8_i8 {
@@ -237,7 +224,6 @@ pub fn movegen_get_all_moves(board: &Board) -> Vec<Move> {
                         piece: ColoredPiece{color, piece},
                         moves: &mut results,
                     };
-                    println!("{},{}", i, j);
                     gen.get_piece_moves();
 
                 }
