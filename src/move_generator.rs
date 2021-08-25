@@ -117,14 +117,28 @@ impl<'a> MoveGenerator<'a> {
         let dirs = &[[1,0],[-1,0],[0,-1],[0,1],[1,1],[-1,1],[-1,-1],[1,-1]];
         for dir in dirs {        
             let dst = [self.start_pos[0] + (dir[0]), self.start_pos[1] + (dir[1])];
-            if matches!(self.get_dst_state(dst), Free | Capturable) {
-                self.add_move(dst);
+            match self.get_dst_state(dst) {
+                Free => self.add_move(dst),
+                Occupied => {},
+                Capturable => {
+                    let piece = Board::get(self.board, dst);
+                    if let Some(piece) = piece {
+                        if !Board::is_defended(self.board,piece, dst) {
+                            self.add_move(dst);
+                        }
+                    }
+
+                },
+                OutOfBounds => {},
             }
         }
     }
     
 
     pub fn get_castle_moves(&mut self) {
+        if self.start_pos[1] != 4 {
+            return;
+        }
         let c = &self.board.castling;
         if self.piece.color == White {
             if c.white_kingside {
@@ -168,7 +182,7 @@ impl<'a> MoveGenerator<'a> {
         self.get_castle(-1)
     }
 
-    pub fn get_piece_moves(&mut self) {
+    pub fn get_pieces_moves(&mut self) {
          match self.piece.piece {
             Pawn => self.get_pawnmoves(),
             Knight => self.get_knightmoves(),
@@ -176,12 +190,12 @@ impl<'a> MoveGenerator<'a> {
             Rook => self.get_rookmoves(),
             Queen => self.get_queenmoves(),
             King => {
-                println!("{},{}",self.start_pos[0],self.start_pos[1]);
                 self.get_kingmoves();
                 self.get_castle_moves();
             }
         }
     }
+
     
     pub fn get_moves(c: Color, board: &'a Board) -> Vec<Move> {
         movegen_get_moves(c,board)
@@ -189,7 +203,20 @@ impl<'a> MoveGenerator<'a> {
     pub fn get_all_moves(board: &'a Board) -> Vec<Move> {
         movegen_get_all_moves(board)
     }
+    
+    pub fn movegen_get_piece_moves(c: Color, board: &Board, p: ColoredPiece, start_pos: [i8;2]) -> Vec<Move> { 
+        let mut results = Vec::new();
+        let mut gen = MoveGenerator {
+            board, 
+            start_pos, 
+            piece: p,
+            moves: &mut results,
+        };
+        gen.get_pieces_moves();
+        results
+    }
 }
+
 pub fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> { 
     let mut results = Vec::new();
     for i in 0..8_i8 {
@@ -202,7 +229,7 @@ pub fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> {
                         piece: ColoredPiece{color, piece},
                         moves: &mut results,
                     };
-                    gen.get_piece_moves();
+                    gen.get_pieces_moves();
 
                 }
                 _ => {}
@@ -224,7 +251,7 @@ pub fn movegen_get_all_moves(board: &Board) -> Vec<Move> {
                         piece: ColoredPiece{color, piece},
                         moves: &mut results,
                     };
-                    gen.get_piece_moves();
+                    gen.get_pieces_moves();
 
                 }
                 _ => {}

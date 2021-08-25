@@ -1,8 +1,8 @@
-use std::default;
 use std::fmt;
+use std::convert::From;
 use Color::*;
 use Piece::*;
-use crate::move_generator::{DesitinationState, MoveGenerator};
+use crate::move_generator::{MoveGenerator};
 
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -19,11 +19,30 @@ pub fn add(arr1: [i8; 2], arr2: [i8; 2]) -> [i8; 2] {
 }
 
 impl Board {
+
+    pub fn is_capturable(&self, p: ColoredPiece, pos: [i8;2]) -> bool {
+        for m in MoveGenerator::get_moves(p.color.opposite_color(), &self) {
+            if m.dst == pos {
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn is_defended(&self, p: ColoredPiece, pos:[i8;2]) -> bool {
+        for m in MoveGenerator::get_moves(p.color, &self) {
+            if m.dst == pos {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn print_new_game() {
         Board::new().print();
     }
-
-    pub fn get_piece_loc(&mut self, piece: ColoredPiece) -> Option<[i8; 2]> {
+    
+    pub fn get_piece_loc(&self, piece: ColoredPiece) -> Option<[i8; 2]> {
         for i in 0..8 {
             for j in 0..8 {
                 match self.arr[i][j] {
@@ -65,9 +84,8 @@ impl Board {
     }
     pub fn play_move(mut self, m: Move) -> Self {
         let p = self.get(m.src);
-        if matches!(p, Some(ColoredPiece { color, piece: King })) {
+        if matches!(p, Some(ColoredPiece {color:_, piece: King })) {
             if (m.src[1] - m.dst[1]).abs() == 2 {
-                let dir = (m.dst[1] - m.src[1]) / 2;
                 let rook = self.find_castle_rook_move(m);
                 if rook.src[0] == -1 {
                     return self;
@@ -89,7 +107,7 @@ impl Board {
     pub fn new() -> Self {
         Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     }
-
+    #[cfg(test)]
     pub fn to_fen(&self) -> String {
         let mut fen = String::new();
         let mut counter: i8 = 0;
@@ -120,6 +138,7 @@ impl Board {
         fen.push_str(&self.castling.to_string());
         fen
     }
+    
 
     pub fn from_fen(fen_str: &str) -> Self {
         //contrusts, iteration, SPLITTING STRING
@@ -138,7 +157,7 @@ impl Board {
                 }
             }
             let m = Color::from_str(color);
-            let castling = CastlingAbility::from_str(castling);
+            let castling = castling.into();
             let last_move = None;
             return Board {
                 arr,
@@ -149,7 +168,7 @@ impl Board {
         }
         panic!("bad fen");
     }
-
+    /*
     pub fn find_piece(&self, look: ColoredPiece) -> bool {
         for i in 0..8 {
             for j in 0..8 {
@@ -165,7 +184,8 @@ impl Board {
         }
         false
     }
-
+    */
+    #[cfg(test)]
     pub fn from_str(sboard: &str, c: Color) -> Self {
         assert!(sboard.len() == 8 * 16);
         let sboard: Vec<_> = sboard.chars().collect();
@@ -180,7 +200,8 @@ impl Board {
         }
         Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
-
+    
+    #[cfg(test)]
     pub fn from_str_piece(sboard: &str, c: Color) -> Self {
         let sboard: Vec<_> = sboard.chars().collect();
         let mut board = [[None; 8]; 8];
@@ -197,6 +218,7 @@ impl Board {
         }
         Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
+    
 
     pub fn print(&self) {
         for i in 0..8 {
@@ -222,42 +244,6 @@ impl Board {
         self.arr[pos[0] as usize][pos[1] as usize] = p;
     }
     //evaluating position as well as material such as controlling the center, having centralized pieces, pieces on your opponents side of the board
-    pub fn get_advantage_print(&self, c: Color) -> i32 {
-        //posibly could go to floating points
-        let mut white_score = 0;
-        let mut black_score = 0;
-        for i in 0..8 {
-            for j in 0..8 {
-                match self.arr[i][j] {
-                    Some(ColoredPiece {
-                        color: White,
-                        piece,
-                    }) => white_score += piece.get_value(),
-                    Some(ColoredPiece {
-                        color: Black,
-                        piece,
-                    }) => black_score += piece.get_value(),
-                    None => {}
-                }
-            }
-        }
-        println!("Whites score is {}", white_score);
-        println!("Blacks score is {}", black_score);
-        if white_score == black_score {
-            println!("Material is equal");
-        } else if white_score > black_score {
-            println!("White has advantage");
-        } else {
-            println!("Black has advantage");
-        }
-
-        if c == White {
-            white_score - black_score
-        } else {
-            black_score - white_score
-        }
-    }
-
     pub fn get_score(&self, c: Color) -> i32 {
         //posibly could go to floating points
         let mut white_score = 0;
@@ -303,20 +289,20 @@ impl ColoredPiece {
         }
     }
     pub fn from_char(c: char) -> Self {
-        let (color, piece, value) = match c {
-            'P' => (White, Pawn, 1),
-            'N' => (White, Knight, 3),
-            'B' => (White, Bishop, 3),
-            'R' => (White, Rook, 5),
-            'Q' => (White, Queen, 9),
-            'K' => (White, King, 100),
+        let (color, piece) = match c {
+            'P' => (White, Pawn),
+            'N' => (White, Knight),
+            'B' => (White, Bishop),
+            'R' => (White, Rook),
+            'Q' => (White, Queen),
+            'K' => (White, King),
 
-            'p' => (Black, Pawn, 1),
-            'n' => (Black, Knight, 3),
-            'b' => (Black, Bishop, 3),
-            'r' => (Black, Rook, 5),
-            'q' => (Black, Queen, 9),
-            'k' => (Black, King, 100),
+            'p' => (Black, Pawn),
+            'n' => (Black, Knight),
+            'b' => (Black, Bishop),
+            'r' => (Black, Rook),
+            'q' => (Black, Queen),
+            'k' => (Black, King),
 
             _ => {
                 println!("{}", c);
@@ -327,20 +313,20 @@ impl ColoredPiece {
     }
 
     pub fn from_piece_str(p: &str) -> Self {
-        let (color, piece, value) = match p {
-            "♟︎" => (White, Pawn, 1),
-            "♞" => (White, Knight, 3),
-            "♝" => (White, Bishop, 3),
-            "♜" => (White, Rook, 5),
-            "♛" => (White, Queen, 9),
-            "♚" => (White, King, 100),
+        let (color, piece) = match p {
+            "♟︎" => (White, Pawn),
+            "♞" => (White, Knight),
+            "♝" => (White, Bishop),
+            "♜" => (White, Rook),
+            "♛" => (White, Queen),
+            "♚" => (White, King),
 
-            "♙" => (Black, Pawn, 1),
-            "♘" => (Black, Knight, 3),
-            "♗" => (Black, Bishop, 3),
-            "♖" => (Black, Rook, 5),
-            "♕" => (Black, Queen, 9),
-            "♔" => (Black, King, 100),
+            "♙" => (Black, Pawn),
+            "♘" => (Black, Knight),
+            "♗" => (Black, Bishop),
+            "♖" => (Black, Rook),
+            "♕" => (Black, Queen),
+            "♔" => (Black, King),
 
             _ => {
                 println!("{}", p);
@@ -442,6 +428,58 @@ pub struct Move {
 }
 
 impl Move {
+    pub fn is_check(&self, b: &Board) -> bool {
+        let p = b.get(self.src); 
+        if let Some(p) = p {
+            let b1 = b.clone();
+            b1.play_move(*self);
+            let k = ColoredPiece {
+                color: p.color.opposite_color(),
+                piece: King,
+            };
+            for m in MoveGenerator::movegen_get_piece_moves(p.color, &b, p, self.src) {
+                let king = Board::get_piece_loc(&b, k);
+                if let Some(king) = king {
+                    if m.dst == king {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    pub fn is_capture(&self, b: &Board) -> bool {
+        let p = b.get(self.src); 
+        if let Some(p) = p {
+            let capture = b.get(self.src);
+            if let Some(capture) = capture {
+                if capture.color != p.color {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    pub fn is_attack(&self, b: &Board) -> bool {
+        let p = b.get(self.src); 
+        if let Some(p) = p {
+            let b1 = b.clone();
+            b1.play_move(*self);
+            for m in MoveGenerator::movegen_get_piece_moves(p.color, &b, p, self.src) {
+                let attack = b.get(m.dst);
+                if let Some(attack) = attack {
+                    if attack.color != p.color {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
     pub fn is_legal_move(check: &Move, b: &Board) -> bool {
         check.print();
         for m in MoveGenerator::get_all_moves(&b) {
@@ -544,8 +582,18 @@ impl Default for CastlingAbility {
     }
 }
 
-impl CastlingAbility {
-    pub fn from_str(s: &str) -> Self {
+impl fmt::Display for CastlingAbility {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.white_kingside  { write!(f, "K")?; }
+        if self.white_queenside { write!(f, "Q")?; }
+        if self.black_kingside  { write!(f, "k")?; }
+        if self.black_queenside { write!(f, "q")?; }  
+        Ok(())
+    }
+}
+
+impl From<&str> for CastlingAbility {
+    fn from(s: &str) -> Self {
         let mut c = CastlingAbility {
             white_kingside: false,
             white_queenside: false,
@@ -564,52 +612,6 @@ impl CastlingAbility {
         if s.contains("q") {
             c.black_queenside = true;
         }
-        dbg!(s, &c);
         c
-    }
-    /*
-    pub fn to_str(&self) -> String {
-        let mut c = String::with_capacity(4);
-        if self.white_kingside  { c.push('K'); }
-        if self.white_queenside { c.push('Q'); }
-        if self.black_kingside  { c.push('k'); }
-        if self.black_queenside { c.push('q'); }
-        c
-        /*
-        match (
-            self.white_kingside,
-            self.white_queenside,
-            self.black_kingside,
-            self.black_queenside,
-        ) {
-            (true, true, true, true) => return "KQkq",
-            (true, true, true, false) => return "KQk",
-            (true, true, false, true) => return "KQq",
-            (true, true, false, false) => return "KQ",
-            (true, false, true, true) => return "Kkq",
-            (true, false, true, false) => return "Kk",
-            (true, false, false, true) => return "Kq",
-            (true, false, false, false) => return "K",
-            (false, true, true, true) => return "Qkq",
-            (false, true, true, false) => return "Qk",
-            (false, true, false, true) => return "Qq",
-            (false, true, false, false) => return "Q",
-            (false, false, true, true) => return "kq",
-            (false, false, true, false) => return "k",
-            (false, false, false, true) => return "q",
-            (false, false, false, false) => return "",
-        }
-        */
-    }
-    */
-}
-
-impl fmt::Display for CastlingAbility {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.white_kingside  { write!(f, "K")?; }
-        if self.white_queenside { write!(f, "Q")?; }
-        if self.black_kingside  { write!(f, "k")?; }
-        if self.black_queenside { write!(f, "q")?; }  
-        Ok(())
     }
 }

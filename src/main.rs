@@ -1,6 +1,8 @@
 #![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables))]
 mod board;
 mod move_generator;
+mod tests;
+mod engine;
 
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use move_generator::*;
@@ -39,75 +41,8 @@ fn main() {
             b_copy.print();
         }
     }
-    //uci_main();
+    uci_main();
 }
-#[test] 
-fn test_basic1() {
-    let board1 = 
-    ". . . . . . k .\n\
-     . . . . . p p p\n\
-     . . . . . . b .\n\
-     . . . . n . . .\n\
-     . . Q . . . . .\n\
-     . . . . . . . .\n\
-     P . . B . P . .\n\
-     . . . . . . K .\n\
-     ";
-     let board2 = 
-     "r n b q k b n r\n\
-      p p p p p p p p\n\
-      . . . . . . . .\n\
-      . . . . . . . .\n\
-      . . . . . . . .\n\
-      . . . . . . . .\n\
-      P P P P P P P P\n\
-      R N B Q K B N R\n\
-      ";
-      let board3 = 
-      ". . . . . . . .\n\
-       . . . . . . . .\n\
-       . . . . . . . .\n\
-       . . . . . . . .\n\
-       . . . q . b . .\n\
-       . n . . P . . .\n\
-       P . . . . . . .\n\
-       . . . . . . . .\n\
-       ";
-       let board4 = 
-       "♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖\n\
-        ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙\n\
-        . . . . . . . .\n\
-        . . . . . . . .\n\
-        . . . . . . . .\n\
-        . . . . . . . .\n\
-        ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟\n\
-        ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜\n\
-        ";
-    let b1 = Board::from_str(board1, White);
-    let b2 = Board::from_str(board2, White);
-    let b3 = Board::from_str(board3, White);
-    let b4 = Board::from_str_piece(board4, White);
-    let b4 = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    b4.print();
-    dbg!(&b1);
-    assert_eq!(b1.arr[0][6], Some(ColoredPiece{color: Black, piece: King}));
-    println!("Board 1: ");
-    b1.get_advantage_print(White);
-    println!("");
-    println!("Board 2: ");
-    b2.get_advantage_print(White);
-    println!("");
-    b1.print();
-    let best_move = get_best_move(&b1, Black, 4);
-    Move::print_option(best_move);
-    println!("\n");
-    let fen = b2.to_fen();
-    println!("{}", fen);
-    let best_board = get_best_move(&b1, White, 2);
-    let from_fen = Board::from_fen(&fen);
-    from_fen.print();
-}
-
 
 pub fn uci_main() {
     loop {
@@ -164,29 +99,6 @@ pub fn cmd_position(boardsetup: &str, moves: &[&str]) {
 }
 
 
-
-//breath first search. loop through depth 0 and find some promising moves first 
-fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<Move> {
-    if depth == 0 {
-        return None;
-    }
-    let mut best_score = 0;
-    let mut best_move = None;
-    for m in MoveGenerator::get_moves(c, &board) {
-        let mut b = board.clone();
-        b = b.play_move(m);
-        let opponents_reponse = get_best_move(&b, c.opposite_color(), depth-1);
-        if let Some(opponents_reponse) = opponents_reponse{
-            b = b.play_move(opponents_reponse);
-        }
-        let new_score = b.get_score(c);
-        if new_score > best_score {
-            best_move = Some(m);
-            best_score = new_score;
-        }
-    }
-    best_move
-}
 
 fn get_user_input() -> Option<String> {
     let mut input = String::new();
