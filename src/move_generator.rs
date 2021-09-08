@@ -19,6 +19,11 @@ pub enum DesitinationState {
     OutOfBounds,
 }
 
+/*
+#28 0x000055555556783a in chess::move_generator::MoveGenerator::get_pieces_moves ()
+#29 0x0000555555567c25 in chess::move_generator::movegen_get_moves ()
+#30 0x0000555555568274 in chess::board::Board::is_defended ()
+*/
 
 impl<'a> MoveGenerator<'a> {
     pub fn maybe_add_move(&mut self, dst: Option<[i8;2]>) {
@@ -123,9 +128,7 @@ impl<'a> MoveGenerator<'a> {
                 Capturable => {
                     let piece = Board::get(self.board, dst);
                     if let Some(piece) = piece {
-                        if !Board::is_defended(self.board,piece, dst) {
-                            self.add_move(dst);
-                        }
+                        self.add_move(dst);
                     }
 
                 },
@@ -186,12 +189,13 @@ impl<'a> MoveGenerator<'a> {
          match self.piece.piece {
             Pawn => self.get_pawnmoves(),
             Knight => self.get_knightmoves(),
-            Bishop => self.get_bishopmoves (),
+            Bishop => self.get_bishopmoves(),
             Rook => self.get_rookmoves(),
             Queen => self.get_queenmoves(),
             King => {
                 self.get_kingmoves();
-                self.get_castle_moves();
+                //fix castling, make sure it works without stack overflowing... getmoves with movegen, constrain to only look at castle sqaures
+                //self.get_castle_moves();
             }
         }
     }
@@ -204,7 +208,7 @@ impl<'a> MoveGenerator<'a> {
         movegen_get_all_moves(board)
     }
     
-    pub fn movegen_get_piece_moves(c: Color, board: &Board, p: ColoredPiece, start_pos: [i8;2]) -> Vec<Move> { 
+    pub fn movegen_get_piece_moves(board: &Board, p: ColoredPiece, start_pos: [i8;2]) -> Vec<Move> { 
         let mut results = Vec::new();
         let mut gen = MoveGenerator {
             board, 
@@ -238,6 +242,44 @@ pub fn movegen_get_moves(c: Color, board: &Board) -> Vec<Move> {
     }
     results
 }
+
+/*
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:237
+#31 0x000055555556a5aa in chess::move_generator::MoveGenerator::get_moves (c=chess::board::Color::Black, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:206
+#32 0x000055555558099b in chess::board::Board::is_defended (self=0x7ffff7a27bd0, p=..., pos=...) at /home/nychawk/Desktop/Chess-AI/src/board.rs:33
+#33 0x0000555555569dec in chess::move_generator::MoveGenerator::get_kingmoves (self=0x7ffff782b218) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:131
+#34 0x000055555556a528 in chess::move_generator::MoveGenerator::get_pieces_moves (self=0x7ffff782b218) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:198
+#35 0x000055555556a93d in chess::move_generator::movegen_get_moves (c=chess::board::Color::White, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:237
+#36 0x000055555556a5aa in chess::move_generator::MoveGenerator::get_moves (c=chess::board::Color::White, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:206
+#37 0x000055555558099b in chess::board::Board::is_defended (self=0x7ffff7a27bd0, p=..., pos=...) at /home/nychawk/Desktop/Chess-AI/src/board.rs:33
+#38 0x0000555555569dec in chess::move_generator::MoveGenerator::get_kingmoves (self=0x7ffff782b4b8) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:131
+#39 0x000055555556a528 in chess::move_generator::MoveGenerator::get_pieces_moves (self=0x7ffff782b4b8) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:198
+#40 0x000055555556a93d in chess::move_generator::movegen_get_moves (c=chess::board::Color::Black, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:237
+#41 0x000055555556a5aa in chess::move_generator::MoveGenerator::get_moves (c=chess::board::Color::Black, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:206
+#42 0x000055555558099b in chess::board::Board::is_defended (self=0x7ffff7a27bd0, p=..., pos=...) at /home/nychawk/Desktop/Chess-AI/src/board.rs:33
+#43 0x0000555555569dec in chess::move_generator::MoveGenerator::get_kingmoves (self=0x7ffff782b758) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:131
+#44 0x000055555556a528 in chess::move_generator::MoveGenerator::get_pieces_moves (self=0x7ffff782b758) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:198
+#45 0x000055555556a93d in chess::move_generator::movegen_get_moves (c=chess::board::Color::White, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:237
+#46 0x000055555556a5aa in chess::move_generator::MoveGenerator::get_moves (c=chess::board::Color::White, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:206
+#47 0x000055555558099b in chess::board::Board::is_defended (self=0x7ffff7a27bd0, p=..., pos=...) at /home/nychawk/Desktop/Chess-AI/src/board.rs:33
+#48 0x0000555555569dec in chess::move_generator::MoveGenerator::get_kingmoves (self=0x7ffff782b9f8) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:131
+#49 0x000055555556a528 in chess::move_generator::MoveGenerator::get_pieces_moves (self=0x7ffff782b9f8) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:198
+#50 0x000055555556a93d in chess::move_generator::movegen_get_moves (c=chess::board::Color::Black, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:237
+#51 0x000055555556a5aa in chess::move_generator::MoveGenerator::get_moves (c=chess::board::Color::Black, board=0x7ffff7a27bd0)
+    at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:206
+#52 0x000055555558099b in chess::board::Board::is_defended (self=0x7ffff7a27bd0, p=..., pos=...) at /home/nychawk/Desktop/Chess-AI/src/board.rs:33
+#53 0x0000555555569dec in chess::move_generator::MoveGenerator::get_kingmoves (self=0x7ffff782bc98) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:131
+#54 0x000055555556a528 in chess::move_generator::MoveGenerator::get_pieces_moves (self=0x7ffff782bc98) at /home/nychawk/Desktop/Chess-AI/src/move_generator.rs:198
+#55 0x000055555556a93d in chess::move_generator::movegen_get_moves (c=chess::board::Color::White, board=0x7ffff7a27bd0)
+*/
 
 pub fn movegen_get_all_moves(board: &Board) -> Vec<Move> { 
     let mut results = Vec::new();

@@ -5,6 +5,7 @@ mod tests;
 mod engine;
 
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
+use engine::MoveEvaluator;
 use move_generator::*;
 use Color::*; 
 use Piece::*;
@@ -37,7 +38,7 @@ fn main() {
         let mut b_copy = b1.clone();
         //m.print();
         if Move::equal(&m, &m1) {
-            b_copy = b_copy.play_move(m);
+            b_copy.play_move(m);
             b_copy.print();
         }
     }
@@ -86,8 +87,12 @@ pub fn cmd_position(boardsetup: &str, moves: &[&str]) {
         return;
     }
     for m in moves {
-        if Move::is_legal_move(&Move::chess_notation_to_move(*m),&b) {
-            b = b.play_move(Move::chess_notation_to_move(m));
+        let e = MoveEvaluator {
+            m: Move::chess_notation_to_move(*m),
+            b: &b,
+        };
+        if e.is_legal_move() {
+            b.play_move(Move::chess_notation_to_move(m));
         }    
         else {
             b.print();

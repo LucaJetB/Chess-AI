@@ -1,21 +1,12 @@
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use crate::move_generator::{DesitinationState, MoveGenerator};
-use crate::engine::{get_best_move};
+use crate::engine::{MoveEvaluator, get_best_move, book_moves};
 use Color::*; 
 use Piece::*;
+use std::fs;
 
 #[test] 
 fn test_basic1() {
-    let board1 = 
-    ". . . . . . k .\n\
-     . . . . . p p p\n\
-     . . . . . . b .\n\
-     . . . . n . . .\n\
-     . . Q . . . . .\n\
-     . . . . . . . .\n\
-     P . . B . P . .\n\
-     . . . . . . K .\n\
-     ";
      let board2 = 
      "r n b q k b n r\n\
       p p p p p p p p\n\
@@ -46,13 +37,10 @@ fn test_basic1() {
         ♟ ♟ ♟ ♟ ♟ ♟ ♟ ♟\n\
         ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜\n\
         ";
-    let b1 = Board::from_str(board1, White);
     let b2 = Board::from_str(board2, White);
     let b3 = Board::from_str(board3, White);
     let b4 = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    if [1,2] == [1,2] {
-        println!("yes");
-    }
+    play(&b2,White);
     /*
     b4.print();
     let f = b1.to_fen();
@@ -84,9 +72,54 @@ fn test_engine() {
      P . . B . P . .\n\
      . . . . . . K .\n\
      ";
+     let board2 = 
+     ". . . . . . k .\n\
+      . . . . . Q p p\n\
+      . . . . . . b .\n\
+      . . . . n . . .\n\
+      . . . . . . . .\n\
+      . . . . . . . .\n\
+      P . . . . P . .\n\
+      . . . . . . K .\n\
+      ";
     let b1 = Board::from_str(board1, White);
-    let m = get_best_move(&b1, White, 4);
+    let b2 = Board::from_str(board2, White);
+    /*
+    let m = get_best_move(&b1, White, 2);
     if let Some(m) = m {
         m.print();
+    }
+    */
+    let m2 = get_best_move(&b2, Black, 4);
+    dbg!(m2);
+    let m1 = get_best_move(&b1, White, 4);
+    dbg!(m1);
+}
+
+pub fn play(board: &Board, mut c: Color) {
+    let mut move_order = String::from("");
+    let mut move_number = 0;
+    let mut b = board.clone();
+    let parse = fs::read_to_string("book.txt").expect("bad read");
+    let lines = parse.split("\n").collect::<Vec<&str>>();
+    let mut m = book_moves(move_order, &lines, move_number);
+
+    while let Some(m1) = m {
+        move_order = move_order + &m1.to_string();
+        move_order.push_str(" ");
+        move_number += 1;
+        b.play_move(m1);
+        c = c.opposite_color();
+        b.print();
+        m = book_moves(move_order, &lines, move_number);
+    }
+
+    loop {
+        let m = get_best_move(&b, c, 4);
+        if let Some((m, s)) = m {
+            b.play_move(m);
+            c = c.opposite_color();
+            b.print();
+        }
     }
 }

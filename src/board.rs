@@ -2,7 +2,7 @@ use std::fmt;
 use std::convert::From;
 use Color::*;
 use Piece::*;
-use crate::move_generator::{MoveGenerator};
+use crate::{engine::MoveEvaluator, move_generator::{MoveGenerator}};
 
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -82,13 +82,13 @@ impl Board {
             _ => panic!("Not a castle move"),
         }
     }
-    pub fn play_move(mut self, m: Move) -> Self {
+    pub fn play_move(&mut self, m: Move) {
         let p = self.get(m.src);
         if matches!(p, Some(ColoredPiece {color:_, piece: King })) {
             if (m.src[1] - m.dst[1]).abs() == 2 {
                 let rook = self.find_castle_rook_move(m);
                 if rook.src[0] == -1 {
-                    return self;
+                    return;
                 }
                 let r = self.get(rook.src);
                 self.set(m.dst, p);
@@ -101,7 +101,6 @@ impl Board {
         self.set(m.dst, p);
         self.set(m.src, None);
         self.last_move = Some(m);
-        self
     }
 
     pub fn new() -> Self {
@@ -243,6 +242,7 @@ impl Board {
     pub fn set(&mut self, pos: [i8; 2], p: Option<ColoredPiece>) {
         self.arr[pos[0] as usize][pos[1] as usize] = p;
     }
+    //comment and delete out later
     //evaluating position as well as material such as controlling the center, having centralized pieces, pieces on your opponents side of the board
     pub fn get_score(&self, c: Color) -> i32 {
         //posibly could go to floating points
@@ -269,6 +269,25 @@ impl Board {
 pub struct ColoredPiece {
     pub color: Color,
     pub piece: Piece,
+}
+
+impl fmt::Display for ColoredPiece {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match (self.color, self.piece) {
+            (White, Pawn) => write!(f, "White Pawn"),
+            (White, Knight) => write!(f, "White Knight"),
+            (White, Bishop) => write!(f, "White Bishop"),
+            (White, Rook) => write!(f, "White Rook"),
+            (White, Queen) => write!(f, "White Queen"),
+            (White, King) => write!(f, "White King"),
+            (Black, Pawn) => write!(f, "Black Pawn"),
+            (Black, Knight) => write!(f, "Black Knight"),
+            (Black, Bishop) => write!(f, "Black Bishop"),
+            (Black, Rook) => write!(f, "Black Rook"),
+            (Black, Queen) => write!(f, "Black Queen"),
+            (Black, King) => write!(f, "Black King"),
+        }
+    }
 }
 
 impl ColoredPiece {
@@ -408,87 +427,58 @@ pub enum Piece {
     King,
 }
 
+
 impl Piece {
     pub fn get_value(&self) -> i32 {
         match self {
-            Pawn => 1,
-            Knight => 3,
-            Bishop => 3,
-            Rook => 5,
-            Queen => 9,
-            King => 10000,
+            Pawn   => 100,
+            Knight => 300,
+            Bishop => 300,
+            Rook   => 500,
+            Queen  => 900,
+            King   => 9000,
         }
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+impl fmt::Display for Piece {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Pawn => write!(f, "Pawn"),
+            Knight => write!(f, "Knight"),
+            Bishop => write!(f, "Bishop"),
+            Rook => write!(f, "Rook"),
+            Queen => write!(f, "Queen"),
+            King => write!(f, "King"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Move {
     pub src: [i8; 2],
     pub dst: [i8; 2],
 }
 
 impl Move {
-    pub fn is_check(&self, b: &Board) -> bool {
-        let p = b.get(self.src); 
-        if let Some(p) = p {
-            let b1 = b.clone();
-            b1.play_move(*self);
-            let k = ColoredPiece {
-                color: p.color.opposite_color(),
-                piece: King,
-            };
-            for m in MoveGenerator::movegen_get_piece_moves(p.color, &b, p, self.src) {
-                let king = Board::get_piece_loc(&b, k);
-                if let Some(king) = king {
-                    if m.dst == king {
-                        return true;
-                    }
-                }
-            }
+
+    pub fn evaluate(&self, b: &Board) -> (i32, i32) {
+        let me = MoveEvaluator {
+            m: *self,
+            b: &b,
+        };
+        let mut real_score = 0;
+        if let Some(p) = me.get_immediate_capture() {
+            real_score += p.get_value();
+        }
+        //Pinning pieces?
+
+        let mut anticipated_score = real_score;
+        for p in me.get_attacked_pieces() {
+            anticipated_score += p.get_value() / 3;
         }
 
-        false
-    }
-
-    pub fn is_capture(&self, b: &Board) -> bool {
-        let p = b.get(self.src); 
-        if let Some(p) = p {
-            let capture = b.get(self.src);
-            if let Some(capture) = capture {
-                if capture.color != p.color {
-                    return true;
-                }
-            }
-        }
-        false
-    }
-
-    pub fn is_attack(&self, b: &Board) -> bool {
-        let p = b.get(self.src); 
-        if let Some(p) = p {
-            let b1 = b.clone();
-            b1.play_move(*self);
-            for m in MoveGenerator::movegen_get_piece_moves(p.color, &b, p, self.src) {
-                let attack = b.get(m.dst);
-                if let Some(attack) = attack {
-                    if attack.color != p.color {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
-    }
-
-    pub fn is_legal_move(check: &Move, b: &Board) -> bool {
-        check.print();
-        for m in MoveGenerator::get_all_moves(&b) {
-            m.print();
-            if Move::equal(&check, &m) {
-                return true;
-            }
-        }
-        false
+        (real_score, anticipated_score)
     }
 
     pub fn print_option(m: Option<Move>) {
