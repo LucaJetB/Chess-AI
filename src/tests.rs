@@ -1,9 +1,8 @@
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use crate::move_generator::{DesitinationState, MoveGenerator};
-use crate::engine::{MoveEvaluator, get_best_move, book_moves};
+use crate::engine::{MoveEvaluator, get_best_move, book_moves, play };
 use Color::*; 
 use Piece::*;
-use std::fs;
 
 #[test] 
 fn test_basic1() {
@@ -40,6 +39,7 @@ fn test_basic1() {
     let b2 = Board::from_str(board2, White);
     let b3 = Board::from_str(board3, White);
     let b4 = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
     play(&b2,White);
     /*
     b4.print();
@@ -94,32 +94,4 @@ fn test_engine() {
     dbg!(m2);
     let m1 = get_best_move(&b1, White, 4);
     dbg!(m1);
-}
-
-pub fn play(board: &Board, mut c: Color) {
-    let mut move_order = String::from("");
-    let mut move_number = 0;
-    let mut b = board.clone();
-    let parse = fs::read_to_string("book.txt").expect("bad read");
-    let lines = parse.split("\n").collect::<Vec<&str>>();
-    let mut m = book_moves(move_order, &lines, move_number);
-
-    while let Some(m1) = m {
-        move_order = move_order + &m1.to_string();
-        move_order.push_str(" ");
-        move_number += 1;
-        b.play_move(m1);
-        c = c.opposite_color();
-        b.print();
-        m = book_moves(move_order, &lines, move_number);
-    }
-
-    loop {
-        let m = get_best_move(&b, c, 4);
-        if let Some((m, s)) = m {
-            b.play_move(m);
-            c = c.opposite_color();
-            b.print();
-        }
-    }
 }

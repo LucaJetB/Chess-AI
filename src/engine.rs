@@ -2,6 +2,9 @@ use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use crate::move_generator::{DesitinationState, MoveGenerator};
 use Color::*; 
 use Piece::*;
+use std::fs;
+use std::fs::File;
+use std::io::Read;
 
 //breath first search
 //teach checkmate, always go to eat king
@@ -33,20 +36,6 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
     moves.first().map(|(m,r,_)| (*m,*r))
 }
 
-pub fn book_moves(move_order_S: String, lines: &Vec<&str>, move_number: i32) -> Option<Move> {
-    let move_order = &move_order_S[..];
-    if move_number == 0 { 
-        return Some(chess_notation_to_move("e2e4"));
-    }
-    for line in lines {
-        if line.contains(move_order) {
-            let moves = line.split(' ').collect::<Vec<&str>>();
-            return Some(chess_notation_to_move(moves[move_number as usize]));
-        }
-    }
-
-    None
-}
 
 pub struct MoveEvaluator<'a> {
     pub m: Move,
@@ -117,4 +106,46 @@ pub fn chess_notation_to_move(m: &str) -> Move {
     let s = Move::parse_move_str(first_half);
     let d = Move::parse_move_str(second_half);
     return Move { src: s, dst: d };
+}
+
+pub fn play(board: &Board, mut c: Color) {
+    let mut move_number = 0;
+    let mut b = board.clone();
+    let mut book = File::open("src/book.txt").expect("cant open book");
+    let mut contents = String::new();
+    book.read_to_string(&mut contents).expect("bad read");
+    let lines = contents.split("\n").collect::<Vec<&str>>();
+    let mut m = book_moves(&b.history, &lines, move_number);
+
+    while let Some(m1) = m {
+        move_number += 1;
+        b.play_move(m1);
+        c = c.opposite_color();
+        b.print();
+        m = book_moves(&b.history, &lines, move_number);
+    }
+
+    for i in 0..100 {
+        let m = get_best_move(&b, c, 4);
+        if let Some((m, s)) = m {
+            b.play_move(m);
+            c = c.opposite_color();
+            b.print();
+        }
+    }
+}
+
+pub fn book_moves(move_order_s: &String, lines: &Vec<&str>, move_number: i32) -> Option<Move> {
+    let move_order = &move_order_s[..];
+    if move_number == 0 { 
+        return Some(chess_notation_to_move("e2e4"));
+    }
+    for line in lines {
+        if line.contains(move_order) {
+            let moves = line.split(' ').collect::<Vec<&str>>();
+            return Some(chess_notation_to_move(moves[move_number as usize]));
+        }
+    }
+
+    None
 }

@@ -10,6 +10,7 @@ pub struct Board {
     pub m: Color,
     pub last_move: Option<Move>,
     pub castling: CastlingAbility,
+    pub history: String,
     //who can castle? everyone
     //en passant available?
 }
@@ -101,6 +102,8 @@ impl Board {
         self.set(m.dst, p);
         self.set(m.src, None);
         self.last_move = Some(m);
+        self.history.push_str(&m.to_move_string());
+        self.history.push_str(" ");
     }
 
     pub fn new() -> Self {
@@ -158,11 +161,13 @@ impl Board {
             let m = Color::from_str(color);
             let castling = castling.into();
             let last_move = None;
+            let history = String::from("");
             return Board {
                 arr,
                 m,
                 last_move,
                 castling,
+                history,
             };
         }
         panic!("bad fen");
@@ -197,7 +202,8 @@ impl Board {
                 }
             }
         }
-        Self {arr: board, m: c, last_move: None, castling: Default::default()}
+        let history = String::from("");
+        Self {arr: board, m: c, last_move: None, castling: Default::default(), history}
     }
     
     #[cfg(test)]
@@ -215,11 +221,12 @@ impl Board {
                 }
             }
         }
-        Self {arr: board, m: c, last_move: None, castling: Default::default()}
+        let history = String::from("");
+        Self {arr: board, m: c, last_move: None, castling: Default::default(), history}
     }
     
 
-    pub fn print(&self) {
+    pub fn print(&self) { //add file and rank.
         for i in 0..8 {
             for j in 0..8 {
                 match self.arr[i][j] {
@@ -549,6 +556,35 @@ impl Move {
             "({},{}) ({},{})",
             self.src[0], self.src[1], self.dst[0], self.dst[1]
         );
+        s
+    }
+
+    pub fn to_move_string(&self) -> String {
+        let mut s = String::from("");
+        match self.src[1] {
+            0 => s.push_str("a"),
+            1 => s.push_str("b"),
+            2 => s.push_str("c"),
+            3 => s.push_str("d"),
+            4 => s.push_str("e"),
+            5 => s.push_str("f"),
+            6 => s.push_str("g"),
+            7 => s.push_str("h"),
+            _ => panic!("invalid move"),
+        }
+        s.push_str(&self.src[0].to_string());
+        match self.dst[1] {
+            0 => s.push_str("a"),
+            1 => s.push_str("b"),
+            2 => s.push_str("c"),
+            3 => s.push_str("d"),
+            4 => s.push_str("e"),
+            5 => s.push_str("f"),
+            6 => s.push_str("g"),
+            7 => s.push_str("h"),
+            _ => panic!("invalid move"),
+        }
+        s.push_str(&self.dst[0].to_string());
         s
     }
 }
