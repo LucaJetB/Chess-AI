@@ -10,7 +10,6 @@ pub struct Board {
     pub m: Color,
     pub last_move: Option<Move>,
     pub castling: CastlingAbility,
-    pub history: String,
     //who can castle? everyone
     //en passant available?
 }
@@ -20,6 +19,24 @@ pub fn add(arr1: [i8; 2], arr2: [i8; 2]) -> [i8; 2] {
 }
 
 impl Board {
+    pub fn get_larger_center() -> Vec<[i8;2]> {
+        let mut spaces = Vec::new();
+        for i in 2..6 {
+            for j in 2..6{ 
+                spaces.push([i,j]);
+            }
+        }
+        spaces
+    }
+    pub fn get_smaller_center() -> Vec<[i8;2]> {
+        let mut spaces = Vec::new();
+        for i in 3..5 {
+            for j in 3..5{ 
+                spaces.push([i,j]);
+            }
+        }
+        spaces
+    }
 
     pub fn is_capturable(&self, p: ColoredPiece, pos: [i8;2]) -> bool {
         for m in MoveGenerator::get_moves(p.color.opposite_color(), &self) {
@@ -85,6 +102,7 @@ impl Board {
     }
     pub fn play_move(&mut self, m: Move) {
         let p = self.get(m.src);
+        //castling
         if matches!(p, Some(ColoredPiece {color:_, piece: King })) {
             if (m.src[1] - m.dst[1]).abs() == 2 {
                 let rook = self.find_castle_rook_move(m);
@@ -97,13 +115,42 @@ impl Board {
                 self.last_move = Some(m);
                 self.set(rook.dst, r);
                 self.set(rook.src, None);
+                self.last_move = Some(m);
+                return;
             }
         }
+        //promotion
+        if matches!(p, Some(ColoredPiece {color:_, piece: Pawn})) {
+            if let Some(p) = p {
+                if p.color == White {
+                    if m.dst[0] == 0 {
+                        let promote = ColoredPiece {
+                            color: White,
+                            piece: Queen,
+                        };
+                        self.set(m.dst, Some(promote));
+                        self.set(m.src, None);
+                        self.last_move = Some(m);
+                        return;
+                    }
+                } else if p.color == Black {
+                    if m.dst[0] == 7 {
+                        let promote = ColoredPiece {
+                            color: Black,
+                            piece: Queen,
+                        };
+                        self.set(m.dst, Some(promote));
+                        self.set(m.src, None);
+                        self.last_move = Some(m);
+                        return;
+                    }
+                }
+            }
+        }
+
         self.set(m.dst, p);
         self.set(m.src, None);
         self.last_move = Some(m);
-        self.history.push_str(&m.to_move_string());
-        self.history.push_str(" ");
     }
 
     pub fn new() -> Self {
@@ -143,8 +190,6 @@ impl Board {
     
 
     pub fn from_fen(fen_str: &str) -> Self {
-        //contrusts, iteration, SPLITTING STRING
-        //"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"\
         let mut arr = [[None; 8]; 8];
         if let [pos, color, castling, _, _, _] = *fen_str.split_whitespace().collect::<Vec<_>>() {
             for (rank, line) in pos.split('/').enumerate() {
@@ -161,13 +206,11 @@ impl Board {
             let m = Color::from_str(color);
             let castling = castling.into();
             let last_move = None;
-            let history = String::from("");
             return Board {
                 arr,
                 m,
                 last_move,
                 castling,
-                history,
             };
         }
         panic!("bad fen");
@@ -202,8 +245,7 @@ impl Board {
                 }
             }
         }
-        let history = String::from("");
-        Self {arr: board, m: c, last_move: None, castling: Default::default(), history}
+        Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
     
     #[cfg(test)]
@@ -221,8 +263,7 @@ impl Board {
                 }
             }
         }
-        let history = String::from("");
-        Self {arr: board, m: c, last_move: None, castling: Default::default(), history}
+        Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
     
 
@@ -249,7 +290,6 @@ impl Board {
     pub fn set(&mut self, pos: [i8; 2], p: Option<ColoredPiece>) {
         self.arr[pos[0] as usize][pos[1] as usize] = p;
     }
-    //comment and delete out later
     //evaluating position as well as material such as controlling the center, having centralized pieces, pieces on your opponents side of the board
     pub fn get_score(&self, c: Color) -> i32 {
         //posibly could go to floating points
@@ -469,6 +509,16 @@ pub struct Move {
 
 impl Move {
 
+    pub fn is_castle(&self, b: &Board) -> bool {
+        let p = b.get(self.src).unwrap();
+        if p.piece == King {
+            if (self.src[0] - self.dst[0]).abs() == 2 {
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn evaluate(&self, b: &Board) -> (i32, i32) {
         let me = MoveEvaluator {
             m: *self,
@@ -560,34 +610,16 @@ impl Move {
     }
 
     pub fn to_move_string(&self) -> String {
-        let mut s = String::from("");
-        match self.src[1] {
-            0 => s.push_str("a"),
-            1 => s.push_str("b"),
-            2 => s.push_str("c"),
-            3 => s.push_str("d"),
-            4 => s.push_str("e"),
-            5 => s.push_str("f"),
-            6 => s.push_str("g"),
-            7 => s.push_str("h"),
-            _ => panic!("invalid move"),
+        fn square_to_move(square: [i8;2]) -> String {
+            let mut s = String::new();
+            s.push(b"abcdefgh"[square[1] as usize] as char);
+            s.push(b"87654321"[square[0] as usize] as char);
+            s
         }
-        s.push_str(&self.src[0].to_string());
-        match self.dst[1] {
-            0 => s.push_str("a"),
-            1 => s.push_str("b"),
-            2 => s.push_str("c"),
-            3 => s.push_str("d"),
-            4 => s.push_str("e"),
-            5 => s.push_str("f"),
-            6 => s.push_str("g"),
-            7 => s.push_str("h"),
-            _ => panic!("invalid move"),
-        }
-        s.push_str(&self.dst[0].to_string());
-        s
+        format!("{}{}", square_to_move(self.src), square_to_move(self.dst))
     }
 }
+
 #[derive(Debug, Clone)]
 
 pub struct CastlingAbility {
