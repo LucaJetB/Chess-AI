@@ -82,6 +82,7 @@ fn test_engine() {
       P . . . . P . .\n\
       . . . . . . K .\n\
       ";
+      
     let b1 = Board::from_str(board1, White);
     let b2 = Board::from_str(board2, White);
     /*
@@ -94,4 +95,7 @@ fn test_engine() {
     dbg!(m2);
     let m1 = get_best_move(&b1, White, 4);
     dbg!(m1);
+    let (_, n) = b1.is_defended([1,5]);
+    println!("{}",n);
+
 }

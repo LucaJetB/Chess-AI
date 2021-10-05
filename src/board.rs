@@ -2,7 +2,8 @@ use std::fmt;
 use std::convert::From;
 use Color::*;
 use Piece::*;
-use crate::{engine::MoveEvaluator, move_generator::{MoveGenerator}};
+use DesitinationState::*;
+use crate::{engine::MoveEvaluator, move_generator::{DesitinationState, MoveGenerator}};
 
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -19,6 +20,7 @@ pub fn add(arr1: [i8; 2], arr2: [i8; 2]) -> [i8; 2] {
 }
 
 impl Board {
+
     pub fn get_larger_center() -> Vec<[i8;2]> {
         let mut spaces = Vec::new();
         for i in 2..6 {
@@ -38,23 +40,46 @@ impl Board {
         spaces
     }
 
-    pub fn is_capturable(&self, p: ColoredPiece, pos: [i8;2]) -> bool {
-        for m in MoveGenerator::get_moves(p.color.opposite_color(), &self) {
-            if m.dst == pos {
-                return true;
+    pub fn get_attacked_pieces(&self, attacker_color: Color) -> Vec<Piece> {
+        let mut attacked_pieces = Vec::new();
+        for m in MoveGenerator::get_moves(self, attacker_color) {
+            let p = self.get(m.dst);
+            if let Some(p) = p {
+                let (a,_) = self.is_attacked(m.dst);
+                if a {
+                    attacked_pieces.push(p.piece);
+                }
             }
         }
-        false
+        attacked_pieces
     }
-
-    pub fn is_defended(&self, p: ColoredPiece, pos:[i8;2]) -> bool {
-        for m in MoveGenerator::get_moves(p.color, &self) {
+    
+    pub fn is_attacked(&self, pos: [i8;2]) -> (bool,i32) {
+        let mut b = false;
+        let mut attackers = 0;
+        let p = self.get(pos).unwrap();
+        for m in MoveGenerator::get_moves(&self, p.color.opposite_color()) {
             if m.dst == pos {
-                return true;
+                b = true;
+                attackers += 1;
             }
         }
-        false
+        (b,attackers)
     }
+    
+    pub fn is_defended(&self, pos:[i8;2]) -> (bool,i32) {
+        let mut b = false;
+        let mut defenders = 0;
+        let p = self.get(pos).unwrap();
+        for m in MoveGenerator::get_moves_with_defense(&self, p.color) {
+            if m.dst == pos {
+                b = true;
+                defenders += 1;
+            }
+        }
+        (b,defenders)
+    }
+    
 
     pub fn print_new_game() {
         Board::new().print();
@@ -84,23 +109,27 @@ impl Board {
             ([0, 4], [0, 6]) => Move {
                 src: [0, 7],
                 dst: [0, 5],
+                dst_state: Free,
             },
             ([0, 4], [0, 2]) => Move {
                 src: [0, 0],
                 dst: [0, 3],
+                dst_state: Free,
             },
             ([7, 4], [7, 6]) => Move {
                 src: [7, 7],
                 dst: [7, 5],
+                dst_state: Free,
             },
             ([7, 4], [7, 2]) => Move {
                 src: [7, 0],
                 dst: [7, 3],
+                dst_state: Free,
             },
             _ => panic!("Not a castle move"),
         }
     }
-    pub fn play_move(&mut self, m: Move) {
+    pub fn play_move(&mut self, m: Move) { //possibly swap the board so you're always looking from the players perspective
         let p = self.get(m.src);
         //castling
         if matches!(p, Some(ColoredPiece {color:_, piece: King })) {
@@ -232,7 +261,6 @@ impl Board {
         false
     }
     */
-    #[cfg(test)]
     pub fn from_str(sboard: &str, c: Color) -> Self {
         assert!(sboard.len() == 8 * 16);
         let sboard: Vec<_> = sboard.chars().collect();
@@ -338,6 +366,18 @@ impl fmt::Display for ColoredPiece {
 }
 
 impl ColoredPiece {
+
+    pub fn get_value(&self) -> i32 {
+        match self.piece {
+            Pawn   => 100,
+            Knight => 300,
+            Bishop => 300,
+            Rook   => 500,
+            Queen  => 900,
+            King   => 9000,
+        }
+    }
+
     pub fn to_piece(&self) -> &str {
         match (self.color, self.piece) {
             (White, Pawn) => "♟︎",
@@ -505,9 +545,30 @@ impl fmt::Display for Piece {
 pub struct Move {
     pub src: [i8; 2],
     pub dst: [i8; 2],
+    pub dst_state: DesitinationState,
 }
 
 impl Move {
+
+    pub fn get_dst_state(b: &Board, dst: [i8;2], player_color: Color) -> DesitinationState {
+        use DesitinationState::*;
+        if !Board::in_bounds(dst) {
+            return OutOfBounds;
+        }
+        match b.get(dst) {
+            Some(ColoredPiece {color, ..}) if color != player_color => Capturable,
+            Some(_) => Occupied,
+            None => Free,
+        }
+    }
+
+    pub fn chess_notation_to_move(m: &str) -> Self {
+        let first_half = &m[0..2];
+        let second_half = &m[2..4];
+        let s = Self::parse_move_str(first_half);
+        let d = Self::parse_move_str(second_half);
+        return Self { src: s, dst: d, dst_state: Free}; //user parsing move
+    }
 
     pub fn is_castle(&self, b: &Board) -> bool {
         let p = b.get(self.src).unwrap();
@@ -580,14 +641,6 @@ impl Move {
         let fix = 8 - num;
         arr[0] = fix;
         arr
-    }
-
-    pub fn chess_notation_to_move(m: &str) -> Self {
-        let first_half = &m[0..2];
-        let second_half = &m[2..4];
-        let s = Move::parse_move_str(first_half);
-        let d = Move::parse_move_str(second_half);
-        return Self { src: s, dst: d };
     }
 
     pub fn parse_moves(m: String) -> Vec<Self> {

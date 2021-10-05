@@ -10,19 +10,20 @@ use std::io::Read;
 
 //breath first search
 //teach checkmate, always go to eat king
+//if piece gets captured, all points should go away
 pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> {
     if depth == 0 {
         return None;
     }
     let mut moves = Vec::new();
-    for m in MoveGenerator::get_moves(c, &board) {
+    for m in MoveGenerator::get_moves(&board, c) {
         let e = MoveEvaluator {m, b: &board};
         let (real_score, anticipated_score) = e.evaluate();
         moves.push((m, real_score, anticipated_score));
     }
     moves.sort_by_key(|(_,_,a)| -a);
-    moves.truncate(5);
-
+    moves.truncate(10);
+    //evaluate defensive moves
     for (m,real_score,_) in moves.iter_mut() {
         let mut b = board.clone();
         b.play_move(*m);
@@ -50,7 +51,6 @@ impl<'a> MoveEvaluator<'a> {
             real_score += p.get_value();
         }
         //Pinning pieces?
-
         let mut anticipated_score = real_score;
         for p in self.get_attacked_pieces() {
             anticipated_score += p.get_value() / 3;
@@ -68,6 +68,21 @@ impl<'a> MoveEvaluator<'a> {
             anticipated_score += 1000;
         }
 
+        //opponents move attacks something of ours
+        //defending or moving or blocking gains some points
+        //add to anticipated score
+
+        /*
+        let attacked = self.b.get(self.m.dst);
+        if let Some(attacked) = attacked {
+            let (_,attackers) = self.b.is_attacked(self.m.dst);
+            let (_,defenders) = self.b.is_defended(self.m.dst);
+            if attackers <= defenders {
+                anticipated_score = 0;
+            }
+        }
+        */
+
         (real_score, anticipated_score)
     }
 
@@ -80,12 +95,12 @@ impl<'a> MoveEvaluator<'a> {
         None
     }
 
-    pub fn get_attacked_pieces(&self) -> Vec<Piece> {
+    pub fn get_attacked_pieces(&self) -> Vec<Piece> { //play move before we enter this func
         let mut attacked_pieces = Vec::new();
         let p = self.b.get(self.m.src).unwrap();
         let mut b1 = self.b.clone();
         b1.play_move(self.m);
-        for m in MoveGenerator::movegen_get_piece_moves(&b1, p, self.m.dst) {
+        for m in MoveGenerator::get_moves_for_piece(&b1, self.m.dst) {
             let e = MoveEvaluator {
                 m, 
                 b: &b1,
@@ -100,31 +115,30 @@ impl<'a> MoveEvaluator<'a> {
     pub fn is_check(&self) -> bool {
         self.get_attacked_pieces().contains(&King)
     }
-
+     
     pub fn is_legal_move(&self) -> bool {
-        self.m.print();
-        for m in MoveGenerator::get_all_moves(self.b) {
-            m.print();
-            if Move::equal(&self.m, &m) {
-                return true;
+        let piece = self.b.get(self.m.src);
+        if let Some(piece) = piece {
+            if piece.color == self.b.m {
+                for m in MoveGenerator::get_moves(self.b, piece.color) {
+                    m.print();
+                    if Move::equal(&self.m, &m) {
+                        return true;
+                    }
+                }
             }
         }
+
         false
     }
-}
-
-pub fn chess_notation_to_move(m: &str) -> Move {
-    let first_half = &m[0..2];
-    let second_half = &m[2..4];
-    let s = Move::parse_move_str(first_half);
-    let d = Move::parse_move_str(second_half);
-    return Move { src: s, dst: d };
+    
 }
 
 pub fn play(board: &Board, mut c: Color) {
+    let mut game_over = false;
     let mut move_number = 0;
     let mut move_history = String::new();
-    let mut b = board.clone();
+    let mut board = board.clone();
     let book = fs::read_to_string("src/book.txt").expect("bad read");
     let lines = book.lines().collect::<Vec<&str>>();
     //shuffle lines to get random opening
@@ -136,7 +150,7 @@ pub fn play(board: &Board, mut c: Color) {
         let m = if use_book {
             book_moves(&move_history, &lines, move_number)
         } else {
-            get_best_move(&b, c, 4).map(|(m,_)| m)
+            get_best_move(&board, c, 4).map(|(m,_)| m)
         };
         if m.is_none() {
             if use_book {
@@ -148,12 +162,32 @@ pub fn play(board: &Board, mut c: Color) {
 
         }
         let m = m.unwrap();
-        b.play_move(m);
+
+        let p = board.get(m.dst);
+        if let Some(p) = p {
+            let (_,attackers) = board.is_attacked(m.dst);
+            let (_,defenders) = board.is_defended(m.dst);
+            println!("{},{}", attackers, defenders);
+
+            if matches!(p.piece, King) {
+                game_over = true;
+            }
+        }
+        
+        m.print();
+        board.play_move(m);
         move_history.push_str(&m.to_move_string());
         move_history.push(' ');
+
         move_number += 1;
         c = c.opposite_color();
-        b.print();
+        board.print();
+        println!("\n");
+        
+        if game_over {
+            println!("King captured");
+            break;
+        }
     }
 }
 
@@ -161,7 +195,7 @@ pub fn book_moves(move_order: &str, lines: &Vec<&str>, move_number: usize) -> Op
     let mut best_length = "";
     dbg!(move_number, move_order);
     if move_number == 0 { 
-        return Some(chess_notation_to_move("e2e4"));
+        return Some(Move::chess_notation_to_move("e2e4"));
     }
     for line in lines {
         //dbg!(line);
@@ -173,7 +207,7 @@ pub fn book_moves(move_order: &str, lines: &Vec<&str>, move_number: usize) -> Op
     }
     if best_length != "" {
         let moves = best_length.split(' ').collect::<Vec<&str>>();
-        return moves.get(move_number).map(|m| chess_notation_to_move(m));
+        return moves.get(move_number).map(|m| Move::chess_notation_to_move(m));
     }
 
     None
