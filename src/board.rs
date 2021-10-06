@@ -2,8 +2,8 @@ use std::fmt;
 use std::convert::From;
 use Color::*;
 use Piece::*;
-use DesitinationState::*;
-use crate::{move_generator::{DesitinationState, MoveGenerator}};
+use DestinationState::*;
+use crate::{move_generator::{DestinationState, MoveGenerator}};
 
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -71,7 +71,7 @@ impl Board {
         let mut b = false;
         let mut defenders = 0;
         let p = self.get(pos).unwrap();
-        for m in MoveGenerator::get_moves_with_defense(&self, p.color) {
+        for m in MoveGenerator::get_defense_moves(&self, p.color) {
             if m.dst == pos {
                 b = true;
                 defenders += 1;
@@ -529,13 +529,13 @@ impl fmt::Display for Piece {
 pub struct Move {
     pub src: [i8; 2],
     pub dst: [i8; 2],
-    pub dst_state: DesitinationState,
+    pub dst_state: DestinationState,
 }
 
 impl Move {
 
-    pub fn get_dst_state(b: &Board, dst: [i8;2], player_color: Color) -> DesitinationState {
-        use DesitinationState::*;
+    pub fn get_dst_state(b: &Board, dst: [i8;2], player_color: Color) -> DestinationState {
+        use DestinationState::*;
         if !Board::in_bounds(dst) {
             return OutOfBounds;
         }

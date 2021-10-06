@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod tests {
 use crate::board::{Board, Color, Piece};
 use crate::move_generator::{MoveGenerator};
 use crate::engine::{MoveEvaluator, get_best_move, book_moves, play };
@@ -98,4 +100,5 @@ fn test_engine() {
     let (_, n) = b1.is_defended([1,5]);
     println!("{}",n);
 
+}
 }

@@ -6,7 +6,7 @@ mod engine;
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
 use crate::engine::{MoveEvaluator, get_best_move, play };
 use move_generator::*;
-use DesitinationState::*;
+use DestinationState::*;
 use Color::*; 
 use Piece::*;
 use ::std::*;
