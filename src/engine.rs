@@ -1,10 +1,7 @@
-use crate::board::{Board, ColoredPiece, Color, Piece, Move};
-use crate::move_generator::{DesitinationState, MoveGenerator};
-use Color::*; 
+use crate::board::{Board, Color, Piece, Move};
+use crate::move_generator::{MoveGenerator};
 use Piece::*;
 use std::fs;
-use std::fs::File;
-use std::io::Read;
 
 
 
@@ -28,7 +25,7 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
         let mut b = board.clone();
         b.play_move(*m);
         let opponents_reponse = get_best_move(&b, c.opposite_color(), depth-1);
-        if let Some((opponents_reponse, opponents_score)) = opponents_reponse {
+        if let Some((_, opponents_score)) = opponents_reponse {
             *real_score -= opponents_score;
         }
 
@@ -97,7 +94,7 @@ impl<'a> MoveEvaluator<'a> {
 
     pub fn get_attacked_pieces(&self) -> Vec<Piece> { //play move before we enter this func
         let mut attacked_pieces = Vec::new();
-        let p = self.b.get(self.m.src).unwrap();
+        let _ = self.b.get(self.m.src).unwrap();
         let mut b1 = self.b.clone();
         b1.play_move(self.m);
         for m in MoveGenerator::get_moves_for_piece(&b1, self.m.dst) {
@@ -111,10 +108,11 @@ impl<'a> MoveEvaluator<'a> {
         }
         attacked_pieces
     }
-
+    /* 
     pub fn is_check(&self) -> bool {
         self.get_attacked_pieces().contains(&King)
     }
+    */
      
     pub fn is_legal_move(&self) -> bool {
         let piece = self.b.get(self.m.src);
@@ -142,11 +140,10 @@ pub fn play(board: &Board, mut c: Color) {
     let book = fs::read_to_string("src/book.txt").expect("bad read");
     let lines = book.lines().collect::<Vec<&str>>();
     //shuffle lines to get random opening
-    let m = book_moves(&move_history, &lines, move_number);
     let mut use_book = true;
 
 
-    for i in 0..100 {
+    for _ in 0..100 {
         let m = if use_book {
             book_moves(&move_history, &lines, move_number)
         } else {

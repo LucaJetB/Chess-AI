@@ -3,7 +3,7 @@ use std::convert::From;
 use Color::*;
 use Piece::*;
 use DesitinationState::*;
-use crate::{engine::MoveEvaluator, move_generator::{DesitinationState, MoveGenerator}};
+use crate::{move_generator::{DesitinationState, MoveGenerator}};
 
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -185,7 +185,6 @@ impl Board {
     pub fn new() -> Self {
         Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
     }
-    #[cfg(test)]
     pub fn to_fen(&self) -> String {
         let mut fen = String::new();
         let mut counter: i8 = 0;
@@ -275,8 +274,7 @@ impl Board {
         }
         Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
-    
-    #[cfg(test)]
+    /* 
     pub fn from_str_piece(sboard: &str, c: Color) -> Self {
         let sboard: Vec<_> = sboard.chars().collect();
         let mut board = [[None; 8]; 8];
@@ -293,6 +291,7 @@ impl Board {
         }
         Self {arr: board, m: c, last_move: None, castling: Default::default()}
     }
+    */
     
 
     pub fn print(&self) { //add file and rank.
@@ -319,6 +318,7 @@ impl Board {
         self.arr[pos[0] as usize][pos[1] as usize] = p;
     }
     //evaluating position as well as material such as controlling the center, having centralized pieces, pieces on your opponents side of the board
+    /* 
     pub fn get_score(&self, c: Color) -> i32 {
         //posibly could go to floating points
         let mut white_score = 0;
@@ -338,6 +338,7 @@ impl Board {
             black_score - white_score
         }
     }
+    */
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -366,7 +367,6 @@ impl fmt::Display for ColoredPiece {
 }
 
 impl ColoredPiece {
-
     pub fn get_value(&self) -> i32 {
         match self.piece {
             Pawn   => 100,
@@ -417,7 +417,7 @@ impl ColoredPiece {
         };
         Self { color, piece }
     }
-
+    /* 
     pub fn from_piece_str(p: &str) -> Self {
         let (color, piece) = match p {
             "♟︎" => (White, Pawn),
@@ -441,23 +441,7 @@ impl ColoredPiece {
         };
         Self { color, piece }
     }
-
-    pub fn to_char(&self) -> char {
-        match (self.color, self.piece) {
-            (White, Pawn) => 'P',
-            (White, Knight) => 'N',
-            (White, Bishop) => 'B',
-            (White, Rook) => 'R',
-            (White, Queen) => 'Q',
-            (White, King) => 'K',
-            (Black, Pawn) => 'p',
-            (Black, Knight) => 'n',
-            (Black, Bishop) => 'b',
-            (Black, Rook) => 'r',
-            (Black, Queen) => 'q',
-            (Black, King) => 'k',
-        }
-    }
+    */
     pub fn to_str(&self) -> &str {
         match (self.color, self.piece) {
             (White, Pawn) => "P",
@@ -579,26 +563,7 @@ impl Move {
         }
         false
     }
-
-    pub fn evaluate(&self, b: &Board) -> (i32, i32) {
-        let me = MoveEvaluator {
-            m: *self,
-            b: &b,
-        };
-        let mut real_score = 0;
-        if let Some(p) = me.get_immediate_capture() {
-            real_score += p.get_value();
-        }
-        //Pinning pieces?
-
-        let mut anticipated_score = real_score;
-        for p in me.get_attacked_pieces() {
-            anticipated_score += p.get_value() / 3;
-        }
-
-        (real_score, anticipated_score)
-    }
-
+    /* 
     pub fn print_option(m: Option<Move>) {
         match m {
             Some(m1) => {
@@ -612,6 +577,7 @@ impl Move {
             }
         }
     }
+    */
     pub fn print(&self) {
         println!(
             "({},{}) ({},{})",
@@ -643,16 +609,6 @@ impl Move {
         arr
     }
 
-    pub fn parse_moves(m: String) -> Vec<Self> {
-        println!("{}", m);
-        let s = &m[..];
-        let v: Vec<&str> = s.split(' ').collect();
-        let mut moves: Vec<Move> = Vec::new();
-        for i in v {
-            moves.push(Move::chess_notation_to_move(s));
-        }
-        moves
-    }
 
     pub fn to_string(&self) -> String {
         let s = format!(
@@ -671,6 +627,7 @@ impl Move {
         }
         format!("{}{}", square_to_move(self.src), square_to_move(self.dst))
     }
+    
 }
 
 #[derive(Debug, Clone)]

@@ -4,13 +4,13 @@ mod tests;
 mod engine;
 
 use crate::board::{Board, ColoredPiece, Color, Piece, Move};
-use crate::engine::{MoveEvaluator, get_best_move, book_moves, play };
+use crate::engine::{MoveEvaluator, get_best_move, play };
 use move_generator::*;
 use DesitinationState::*;
 use Color::*; 
 use Piece::*;
 use ::std::*;
-use std::io::{self, Read};
+use std::io::{self};
 fn main() {
     let board1= 
     "r n b q k b n r\n\
@@ -22,7 +22,7 @@ fn main() {
      P P P P P P P P\n\
      R N B Q K B N R\n\
      ";
-     let white_king = ColoredPiece {
+     let _ = ColoredPiece {
         color: White,
         piece: King,
     };
@@ -31,10 +31,14 @@ fn main() {
         dst: [7,2],
         dst_state: Free,
     };
+    let _ = m1.to_move_string();
     let b1 = Board::from_fen("r1bqkb1r/ppp2ppp/2np1n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 1");
-    let b2 = Board::from_fen("rn1qkb1r/pppb1p1p/3p1np1/4p1B1/4P3/2NP4/PPPQ1PPP/R3KBNR w KQkq - 0 1");
+    let _ = Board::from_fen("rn1qkb1r/pppb1p1p/3p1np1/4p1B1/4P3/2NP4/PPPQ1PPP/R3KBNR w KQkq - 0 1");
+    let b2 = Board::from_str(&board1, White);
+    play(&b1, White);
     b2.print();
     let p = b1.get([7,7]).expect("rook not found");
+    let _ = p.get_value();
     for m in MoveGenerator::get_moves(&b2, White) {
         let mut b_copy = b1.clone();
         //m.print();
@@ -44,9 +48,7 @@ fn main() {
         }
     }
 
-    //let _larger = Board::get_larger_center();
-    //let _smaller = Board::get_smaller_center();
-    //let _attacked_pieces = b1.get_attacked_pieces(White);
+    let _attacked_pieces = b1.get_attacked_pieces(White);
     let _defended = b1.is_defended([0,0]);
     let _piece_loc = b1.get_piece_loc(ColoredPiece{piece: King,color: White});
     uci_main();
@@ -82,7 +84,8 @@ pub fn uci_main() {
 
 pub fn cmd_position(boardsetup: &str, moves: &[&str]) {
     let mut b = Board::new();
-    let m = get_best_move(&b, White, 2);
+    let _ = get_best_move(&b, White, 2);
+    let _ = b.to_fen();
     if boardsetup == "startpos" {
         b = b;
     }

@@ -1,5 +1,5 @@
-use crate::board::{Board, ColoredPiece, Color, Piece, Move};
-use crate::move_generator::{DesitinationState, MoveGenerator};
+use crate::board::{Board, Color, Piece};
+use crate::move_generator::{MoveGenerator};
 use crate::engine::{MoveEvaluator, get_best_move, book_moves, play };
 use Color::*; 
 use Piece::*;
@@ -26,7 +26,7 @@ fn test_basic1() {
        P . . . . . . .\n\
        . . . . . . . .\n\
        ";
-       let board4 = 
+       let _board4 = 
        "♖ ♘ ♗ ♕ ♔ ♗ ♘ ♖\n\
         ♙ ♙ ♙ ♙ ♙ ♙ ♙ ♙\n\
         . . . . . . . .\n\
@@ -37,8 +37,8 @@ fn test_basic1() {
         ♜ ♞ ♝ ♛ ♚ ♝ ♞ ♜\n\
         ";
     let b2 = Board::from_str(board2, White);
-    let b3 = Board::from_str(board3, White);
-    let b4 = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    let _b3 = Board::from_str(board3, White);
+    let _b4 = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
     play(&b2,White);
     /*
