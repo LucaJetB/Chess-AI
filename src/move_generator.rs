@@ -8,7 +8,7 @@ pub struct MoveGenerator<'a> {
     pub start_pos: [i8;2],
     pub piece: ColoredPiece,
     pub moves: &'a mut Vec<Move>,
-    pub dst_filter:  &'static dyn Fn(DestinationState) -> bool,
+    pub dst_filter: &'static dyn Fn(DestinationState) -> bool,
 }
 
 
@@ -69,16 +69,9 @@ impl<'a> MoveGenerator<'a> {
         let yvals = [1,-1,2,-2,2,-2,1,-1];
         for i in 0..7 {
             let dst = [self.start_pos[0] + yvals[i], self.start_pos[1] + xvals[i]];
-            match Move::get_dst_state(self.board, dst, self.piece.color) {
-                Free => self.add_move(dst, Free),
-                Occupied => {
-                    if self.defend {
-                        self.add_move(dst, Occupied)
-
-                    }
-                },
-                Capturable => self.add_move(dst, Capturable),
-                OutOfBounds => {},
+            let dst_state = Move::get_dst_state(self.board, dst, self.piece.color);
+            if dst_state != OutOfBounds {
+                self.add_move(dst, dst_state);
             }
         }
     }
