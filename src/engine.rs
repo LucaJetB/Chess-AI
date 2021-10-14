@@ -85,7 +85,10 @@ impl<'a> MoveEvaluator<'a> {
 
     pub fn get_immediate_capture(&self) -> Option<Piece> {
         let p = self.b.get(self.m.src).unwrap();
+        dbg!(p);
         if let Some(capture) = self.b.get(self.m.dst) {
+            dbg!(self.m);
+            dbg!(capture);
             assert!(capture.color != p.color);
             return Some(capture.piece);
         }

@@ -32,6 +32,7 @@ impl<'a> MoveGenerator<'a> {
             dst,
             dst_state,
         };
+        assert!(dst_state != Occupied);
         self.moves.push(m);
     }
 
@@ -85,9 +86,7 @@ impl<'a> MoveGenerator<'a> {
                 match Move::get_dst_state(self.board, dst, self.piece.color) {
                     Free => self.add_move(dst, Free),
                     Occupied => {
-                        if self.defend {
-                            self.add_move(dst, Occupied)
-                        }
+                        self.add_move(dst, Occupied);
                         break;
                     },
                     OutOfBounds => break,
@@ -119,9 +118,7 @@ impl<'a> MoveGenerator<'a> {
             match Move::get_dst_state(self.board, dst, self.piece.color) {
                 Free => self.add_move(dst, Free),
                 Occupied => {
-                    if self.defend {
-                        self.add_move(dst, Occupied)
-                    }
+                    self.add_move(dst, Occupied)
                 },
                 Capturable => {
                     let piece = Board::get(self.board, dst);
@@ -187,7 +184,7 @@ impl<'a> MoveGenerator<'a> {
         if self.board.get(p1) != None || self.board.get(p2) != None {
             return None;
         }
-        for m in MoveGenerator::get_moves_with_predicates(self.board, self.piece.color.opposite_color(), false, 
+        for m in MoveGenerator::get_moves_with_predicates(self.board, self.piece.color.opposite_color(), 
         |p| p != King, &|_| true) {
             if m.dst == p1 || m.dst == p2 {
                 return None;
@@ -225,7 +222,6 @@ impl<'a> MoveGenerator<'a> {
             start_pos: pos,
             piece: p,
             moves: &mut results,
-            defend: false,
             dst_filter: &|_| true,
         };
         gen.get_pieces_moves();
@@ -258,7 +254,7 @@ impl<'a> MoveGenerator<'a> {
     */
     //add a dst state filter to be able to search for dst of certain type
     //maybe put lamda in mg itself 
-    pub fn get_moves_with_predicates(board: &Board, color: Color, defend: bool, piece_filter: impl Fn(Piece) -> bool, dst_filter: &'static dyn Fn(DestinationState) -> bool) -> Vec<Move> { 
+    pub fn get_moves_with_predicates(board: &Board, color: Color, piece_filter: impl Fn(Piece) -> bool, dst_filter: &'static dyn Fn(DestinationState) -> bool) -> Vec<Move> { 
         let mut results = Vec::new();
         for i in 0..8_i8 {
             for j in 0..8_i8 {
@@ -272,7 +268,6 @@ impl<'a> MoveGenerator<'a> {
                             start_pos: [i,j],
                             piece: ColoredPiece {piece, color,},
                             moves: &mut results,
-                            defend,
                             dst_filter,
                         };
                         gen.get_pieces_moves();
@@ -285,12 +280,12 @@ impl<'a> MoveGenerator<'a> {
     }
 
     pub fn get_moves(board: &Board, color: Color) -> Vec<Move> {
-        Self::get_moves_with_predicates(board, color, false, 
+        Self::get_moves_with_predicates(board, color, 
             |_| true, &|dst_state| dst_state != Occupied)
     }
 
     pub fn get_defense_moves(board: &Board, color: Color) -> Vec<Move> {
-        Self::get_moves_with_predicates(board, color, true, 
+        Self::get_moves_with_predicates(board, color, 
             |_| true, &|dst_state| dst_state == Occupied)
     }
 
