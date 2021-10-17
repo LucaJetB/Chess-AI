@@ -8,6 +8,7 @@ use std::fs;
 //breath first search
 //teach checkmate, always go to eat king
 //if piece gets captured, all points should go away
+/// Sometimes c is != board.color, in this case it's used to find opponents best move.
 pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> {
     if depth == 0 {
         return None;
@@ -19,7 +20,9 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
         moves.push((m, real_score, anticipated_score));
     }
     moves.sort_by_key(|(_,_,a)| -a);
-    moves.truncate(10);
+    if depth != 3 {
+        moves.truncate(10);
+    }
     //evaluate defensive moves
     for (m,real_score,_) in moves.iter_mut() {
         let mut b = board.clone();
@@ -32,6 +35,11 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
     }
 
     moves.sort_by_key(|(_,r,_)| -r);
+    if depth == 3 {
+        for (m,r,a) in &moves {
+            println!("{:?}, {}, {}", m, r, a);
+        }
+    }
     moves.first().map(|(m,r,_)| (*m,*r))
 }
 

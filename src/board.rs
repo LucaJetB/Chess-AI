@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{borrow::Borrow, fmt};
 use std::convert::From;
 use Color::*;
 use Piece::*;
@@ -8,7 +8,8 @@ use crate::{move_generator::{DestinationState, MoveGenerator}};
 #[derive(Debug, Clone)]
 pub struct Board {
     pub arr: [[Option<ColoredPiece>; 8]; 8],
-    pub m: Color,
+    /// Used to dtermine whos move it is.
+    pub m: Color, 
     pub last_move: Option<Move>,
     pub castling: CastlingAbility,
     pub castled: bool,
@@ -277,7 +278,7 @@ impl Board {
         }
         Self {arr: board, m: c, last_move: None, castling: Default::default(), castled: false}
     }
-    /* 
+
     pub fn from_str_piece(sboard: &str, c: Color) -> Self {
         let sboard: Vec<_> = sboard.chars().collect();
         let mut board = [[None; 8]; 8];
@@ -287,26 +288,29 @@ impl Board {
                 if sboard[index] != '.' {
                     let s = sboard[index].to_string();
                     let p = &s[..];
-                    println!("{}", p);
                     board[i][j] = Some(ColoredPiece::from_piece_str(p))
                 }
             }
         }
-        Self {arr: board, m: c, last_move: None, castling: Default::default()}
+        Self {arr: board, m: c, last_move: None, castling: Default::default(), castled: false}
     }
-    */
+
     
 
-    pub fn print(&self) { //add file and rank.
+    pub fn print(&self) { // TODO add file and rank.
+        println!("  0 1 2 3 4 5 6 7");
         for i in 0..8 {
+            print!("{} ", i);
             for j in 0..8 {
                 match self.arr[i][j] {
                     Some(p) => print!("{} ", p.to_piece()),
                     None => print!(". "),
                 }
             }
+            print!("{}", i);
             println!()
         }
+        println!("  0 1 2 3 4 5 6 7");
         println!("Side: {}", self.m.to_str());
     }
 
@@ -420,10 +424,10 @@ impl ColoredPiece {
         };
         Self { color, piece }
     }
-    /* 
+     
     pub fn from_piece_str(p: &str) -> Self {
         let (color, piece) = match p {
-            "♟︎" => (White, Pawn),
+            "♟" => (White, Pawn),
             "♞" => (White, Knight),
             "♝" => (White, Bishop),
             "♜" => (White, Rook),
@@ -438,13 +442,12 @@ impl ColoredPiece {
             "♔" => (Black, King),
 
             _ => {
-                println!("{}", p);
-                panic!("You fucked up 2")
+                panic!("Wrong piece char '{}'", p);
             }
         };
         Self { color, piece }
     }
-    */
+
     pub fn to_str(&self) -> &str {
         match (self.color, self.piece) {
             (White, Pawn) => "P",
@@ -528,11 +531,17 @@ impl fmt::Display for Piece {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq)]
 pub struct Move {
     pub src: [i8; 2],
     pub dst: [i8; 2],
     pub dst_state: DestinationState,
+}
+
+impl std::fmt::Debug for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({},{}) ({},{})", self.src[1], self.src[0], self.dst[1], self.dst[0])
+    }
 }
 
 impl Move {
