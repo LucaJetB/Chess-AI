@@ -11,6 +11,7 @@ pub struct Board {
     pub m: Color,
     pub last_move: Option<Move>,
     pub castling: CastlingAbility,
+    pub castled: bool,
     //who can castle? everyone
     //en passant available?
 }
@@ -145,6 +146,7 @@ impl Board {
                 self.set(rook.dst, r);
                 self.set(rook.src, None);
                 self.last_move = Some(m);
+                self.castled = true;
                 return;
             }
         }
@@ -239,6 +241,7 @@ impl Board {
                 m,
                 last_move,
                 castling,
+                castled: false,
             };
         }
         panic!("bad fen");
@@ -272,7 +275,7 @@ impl Board {
                 }
             }
         }
-        Self {arr: board, m: c, last_move: None, castling: Default::default()}
+        Self {arr: board, m: c, last_move: None, castling: Default::default(), castled: false}
     }
     /* 
     pub fn from_str_piece(sboard: &str, c: Color) -> Self {

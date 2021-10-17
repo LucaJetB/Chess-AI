@@ -32,7 +32,6 @@ impl<'a> MoveGenerator<'a> {
             dst,
             dst_state,
         };
-        assert!(dst_state != Occupied);
         self.moves.push(m);
     }
 
@@ -137,7 +136,7 @@ impl<'a> MoveGenerator<'a> {
         fn maybe_add_move(mg: &mut MoveGenerator, dst: Option<[i8;2]>) {
             if let Some(dst) = dst {
                 // If the dst is Some() then its dst_state must be Free because of check we do in get_castle()
-                mg.add_move(dst, Free) 
+                mg.add_move(dst, Free)
             }
         }
 
@@ -209,23 +208,11 @@ impl<'a> MoveGenerator<'a> {
             Queen => self.get_queenmoves(),
             King => {
                 self.get_kingmoves();
-                self.get_castle_moves();
+                if self.board.castled == false {
+                    self.get_castle_moves();
+                }
             }
         }
-    }
-    
-    pub fn get_moves_for_piece(board: &Board, pos: [i8;2]) -> Vec<Move> { 
-        let p = board.get(pos).unwrap();
-        let mut results = Vec::new();
-        let mut gen = MoveGenerator {
-            board, 
-            start_pos: pos,
-            piece: p,
-            moves: &mut results,
-            dst_filter: &|_| true,
-        };
-        gen.get_pieces_moves();
-        results
     }
     /* 
     pub fn get_moves_for_color(board: &Board, color: Color, skip_king: bool) -> Vec<Move> { 

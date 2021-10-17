@@ -1,5 +1,5 @@
 use crate::board::{Board, Color, Piece, Move};
-use crate::move_generator::{MoveGenerator};
+use crate::move_generator::{MoveGenerator, DestinationState};
 use Piece::*;
 use std::fs;
 
@@ -85,10 +85,7 @@ impl<'a> MoveEvaluator<'a> {
 
     pub fn get_immediate_capture(&self) -> Option<Piece> {
         let p = self.b.get(self.m.src).unwrap();
-        dbg!(p);
         if let Some(capture) = self.b.get(self.m.dst) {
-            dbg!(self.m);
-            dbg!(capture);
             assert!(capture.color != p.color);
             return Some(capture.piece);
         }
@@ -97,10 +94,11 @@ impl<'a> MoveEvaluator<'a> {
 
     pub fn get_attacked_pieces(&self) -> Vec<Piece> { //play move before we enter this func
         let mut attacked_pieces = Vec::new();
-        let _ = self.b.get(self.m.src).unwrap();
+        let piece = self.b.get(self.m.src).unwrap();
         let mut b1 = self.b.clone();
         b1.play_move(self.m);
-        for m in MoveGenerator::get_moves_for_piece(&b1, self.m.dst) {
+        for m in MoveGenerator::get_moves_with_predicates(&b1, piece.color, 
+            |p| p == piece.piece, &|dst_state| dst_state != DestinationState::Occupied) {
             let e = MoveEvaluator {
                 m, 
                 b: &b1,
