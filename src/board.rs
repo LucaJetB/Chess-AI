@@ -22,6 +22,55 @@ pub fn add(arr1: [i8; 2], arr2: [i8; 2]) -> [i8; 2] {
 }
 
 impl Board {
+    pub fn get_relative_value(&self, p: ColoredPiece, pos: [i8;2]) -> i32 {
+        let value = 0;
+        value += p.get_value();
+        if p.piece == Pawn {
+            let mut is_endgame = false;
+            if self.count_pieces() < 12 {
+                is_endgame = true;
+            }
+            if p.color == Color::White {
+                value += (7-pos[0] * 10) as i32;
+
+                if pos[0] == 0 {
+                    value += 900;
+                }
+            }
+            else {
+                value += (pos[0] * 10) as i32;
+                if pos[0] == 7 {
+                    value += 900;
+                }
+            }
+            if is_endgame {
+                value += 100;
+            }
+        }
+        value
+    }
+
+
+    pub fn evaluate(&self, c: Color) -> i32 {
+        let mut white_score = 0;
+        let mut black_score = 0;
+        for i in 0..8 {
+            for j in 0..8 {
+                match self.arr[i][j] {
+                    Some(p) => {
+                        if p.color == White {
+                            white_score += self.get_relative_value(p, [i as i8,j as i8]);
+                        }
+                        else {
+                            black_score += self.get_relative_value(p, [i as i8,j as i8]);
+                        }
+                    }
+                    None =>  {},
+                }
+            }
+        }
+        white_score
+    }
 
     pub fn count_pieces(&self) -> i32 {
         let mut count = 0;

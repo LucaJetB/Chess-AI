@@ -47,6 +47,12 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
     moves.first().map(|(m,r)| (*m,*r))
 }
 
+pub fn get_best_move_minimax(board: &Board, depth: i8, color: Color) -> i32 {
+    if depth == 0 {
+        
+    }
+}
+
 
 pub struct MoveEvaluator<'a> {
     pub m: Move,
