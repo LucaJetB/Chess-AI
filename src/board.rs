@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt};
+use std::fmt;
 use std::convert::From;
 use Color::*;
 use Piece::*;
@@ -22,6 +22,18 @@ pub fn add(arr1: [i8; 2], arr2: [i8; 2]) -> [i8; 2] {
 }
 
 impl Board {
+
+    pub fn count_pieces(&self) -> i32 {
+        let mut count = 0;
+        for i in 0..8 {
+            for j in 0..8 {
+                if matches!(self.arr[i][j], Some(p)) {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
 
     pub fn get_larger_center() -> Vec<[i8;2]> {
         let mut spaces = Vec::new();
@@ -278,7 +290,7 @@ impl Board {
         }
         Self {arr: board, m: c, last_move: None, castling: Default::default(), castled: false}
     }
-
+    #[cfg(test)]
     pub fn from_str_piece(sboard: &str, c: Color) -> Self {
         let sboard: Vec<_> = sboard.chars().collect();
         let mut board = [[None; 8]; 8];
@@ -424,7 +436,7 @@ impl ColoredPiece {
         };
         Self { color, piece }
     }
-     
+    #[cfg(test)]
     pub fn from_piece_str(p: &str) -> Self {
         let (color, piece) = match p {
             "♟" => (White, Pawn),
@@ -540,7 +552,7 @@ pub struct Move {
 
 impl std::fmt::Debug for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "({},{}) ({},{})", self.src[1], self.src[0], self.dst[1], self.dst[0])
+        write!(f, "({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1])
     }
 }
 

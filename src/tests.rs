@@ -1,10 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::board::{Board, Color, Piece};
-    use crate::move_generator::{MoveGenerator};
-    use crate::engine::{MoveEvaluator, get_best_move, book_moves, play };
+    use crate::board::*;
+    use crate::engine::*;
     use Color::*; 
-    use Piece::*;
 
     #[test] 
     fn test_basic1() {
@@ -42,7 +40,7 @@ mod tests {
         let _b3 = Board::from_str(board3, White);
         let _b4 = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
-        play(&b2,White);
+        play(&b2,White, true);
         /*
         b4.print();
         let f = b1.to_fen();
@@ -103,21 +101,26 @@ mod tests {
     }
 
     #[test] 
+    // TODO Simple boards where we know outcomes (finding basic checkmates)
+    // Expand book
+    // A board per test
     fn test_bad_rook_move() {
         let board = 
        ". . . . . . ♔ .\n\
         . . . . . . ♙ .\n\
-        ♙ . . . . . . .\n\
+        ♙ . . ♟ . . . .\n\
         . ♙ . . . . ♙ .\n\
-        . . . . . ♙ . ♟\n\
+        . . ♟ . . ♙ . ♟\n\
         . . ♖ . . . . .\n\
         ♖ . . . . . . .\n\
         . ♚ . . . . . .\n\
         ";
 
-        let b = Board::from_str_piece(board, Black);
+        let mut b = Board::from_str_piece(board, Black);
+        b.castled = true;
         b.print();
-        let m = get_best_move(&b, Black, 3);
+        let (m,_) = get_best_move(&b, Black, 3).unwrap();
         dbg!(m);
+        play(&b, Black, false);
     }
 }

@@ -35,7 +35,7 @@ fn main() {
     let b1 = Board::from_fen("r1bqkb1r/ppp2ppp/2np1n2/4p3/2B1P3/2N2N2/PPPP1PPP/R1BQK2R w KQkq - 0 1");
     let _ = Board::from_fen("rn1qkb1r/pppb1p1p/3p1np1/4p1B1/4P3/2NP4/PPPQ1PPP/R3KBNR w KQkq - 0 1");
     let b2 = Board::from_str(&board1, White);
-    play(&b1, White);
+    play(&b1, White, true);
     b2.print();
     let p = b1.get([7,7]).expect("rook not found");
     let _ = p.get_value();

@@ -1,6 +1,7 @@
 use crate::board::{Board, Color, Piece, Move};
 use crate::move_generator::{MoveGenerator, DestinationState};
 use Piece::*;
+//use core::num::dec2flt::rawfp::RawFloat;
 use std::fs;
 
 
@@ -16,31 +17,34 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
     let mut moves = Vec::new();
     for m in MoveGenerator::get_moves(&board, c) {
         let e = MoveEvaluator {m, b: &board};
-        let (real_score, anticipated_score) = e.evaluate();
-        moves.push((m, real_score, anticipated_score));
+        let real_score = e.evaluate();
+        moves.push((m, real_score));
     }
-    moves.sort_by_key(|(_,_,a)| -a);
-    if depth != 3 {
-        moves.truncate(10);
-    }
+    moves.sort_by_key(|(_,r)| -r);
     //evaluate defensive moves
-    for (m,real_score,_) in moves.iter_mut() {
+    for (m,real_score) in moves.iter_mut() {
         let mut b = board.clone();
         b.play_move(*m);
         let opponents_reponse = get_best_move(&b, c.opposite_color(), depth-1);
-        if let Some((_, opponents_score)) = opponents_reponse {
+        if let Some((opponents_move, opponents_score)) = opponents_reponse {
+            if depth == 4 {
+                println!("{:?}, {}, {}, {:?}", m, real_score, opponents_score, opponents_move);
+            }
             *real_score -= opponents_score;
         }
 
     }
 
-    moves.sort_by_key(|(_,r,_)| -r);
-    if depth == 3 {
-        for (m,r,a) in &moves {
-            println!("{:?}, {}, {}", m, r, a);
+    moves.sort_by_key(|(_,r)| -r);
+    
+    if depth == 4 {
+        println!("---");
+        for (m,r) in &moves {
+            println!("{:?}, {}", m, r);
         }
     }
-    moves.first().map(|(m,r,_)| (*m,*r))
+    
+    moves.first().map(|(m,r)| (*m,*r))
 }
 
 
@@ -50,45 +54,60 @@ pub struct MoveEvaluator<'a> {
 }
 
 impl<'a> MoveEvaluator<'a> {
-    pub fn evaluate(&self) -> (i32, i32) {
+    pub fn evaluate(&self) -> i32 {
         let mut real_score = 0;
         if let Some(p) = self.get_immediate_capture() {
             real_score += p.get_value();
         }
         //Pinning pieces?
-        let mut anticipated_score = real_score;
-        for p in self.get_attacked_pieces() {
-            anticipated_score += p.get_value() / 3;
+        let mut b = self.b.clone();
+        b.play_move(self.m);
+        for p in self.get_attacked_pieces(&b) {
+            real_score += p.get_value() / 10;
         }
 
         let smaller_center = Board::get_smaller_center();
         let larger_center = Board::get_larger_center();
         if smaller_center.contains(&self.m.dst) {
-            anticipated_score += 100;
+            real_score += 50;
         } else if larger_center.contains(&self.m.dst) {
-            anticipated_score += 50;
+            real_score += 25;
         }
-
         if self.m.is_castle(&self.b) {
-            anticipated_score += 1000;
+            real_score += 100;
         }
 
+        let pawn = b.get(self.m.dst);
+        if let Some(pawn) = pawn {
+            if pawn.piece == Pawn {
+                let mut is_endgame = false;
+                if b.count_pieces() < 12 {
+                    is_endgame = true;
+                }
+                if pawn.color == Color::White {
+                    real_score += ((7-self.m.dst[0]) * 10) as i32;
+
+                    if self.m.dst[0] == 0 {
+                        real_score += 900;
+                    }
+                }
+                else {
+                    real_score += (self.m.dst[0] * 10) as i32;
+                    if self.m.dst[0] == 7 {
+                        real_score += 900;
+                    }
+                }
+                if is_endgame {
+                    real_score += 100;
+                }
+            }
+        }
         //opponents move attacks something of ours
         //defending or moving or blocking gains some points
         //add to anticipated score
 
-        /*
-        let attacked = self.b.get(self.m.dst);
-        if let Some(attacked) = attacked {
-            let (_,attackers) = self.b.is_attacked(self.m.dst);
-            let (_,defenders) = self.b.is_defended(self.m.dst);
-            if attackers <= defenders {
-                anticipated_score = 0;
-            }
-        }
-        */
 
-        (real_score, anticipated_score)
+        real_score
     }
 
     pub fn get_immediate_capture(&self) -> Option<Piece> {
@@ -100,17 +119,12 @@ impl<'a> MoveEvaluator<'a> {
         None
     }
 
-    pub fn get_attacked_pieces(&self) -> Vec<Piece> { //play move before we enter this func
+    pub fn get_attacked_pieces(&self, b: &Board) -> Vec<Piece> { //play move before we enter this func
         let mut attacked_pieces = Vec::new();
-        let piece = self.b.get(self.m.src).unwrap();
-        let mut b1 = self.b.clone();
-        b1.play_move(self.m);
-        for m in MoveGenerator::get_moves_with_predicates(&b1, piece.color, 
+        let piece = b.get(self.m.dst).unwrap();
+        for m in MoveGenerator::get_moves_with_predicates(&b, piece.color, 
             |p| p == piece.piece, &|dst_state| dst_state != DestinationState::Occupied) {
-            let e = MoveEvaluator {
-                m, 
-                b: &b1,
-            };
+            let e = MoveEvaluator {m, b};
             if let Some(capture) = e.get_immediate_capture() {
                 attacked_pieces.push(capture);
             }
@@ -141,7 +155,7 @@ impl<'a> MoveEvaluator<'a> {
     
 }
 
-pub fn play(board: &Board, mut c: Color) {
+pub fn play(board: &Board, mut c: Color, mut use_book: bool) {
     let mut game_over = false;
     let mut move_number = 0;
     let mut move_history = String::new();
@@ -149,7 +163,6 @@ pub fn play(board: &Board, mut c: Color) {
     let book = fs::read_to_string("src/book.txt").expect("bad read");
     let lines = book.lines().collect::<Vec<&str>>();
     //shuffle lines to get random opening
-    let mut use_book = true;
 
 
     for _ in 0..100 {
