@@ -3,7 +3,7 @@ use std::convert::From;
 use Color::*;
 use Piece::*;
 use DestinationState::*;
-use crate::{move_generator::{DestinationState, MoveGenerator}};
+use crate::{engine::MoveEvaluator, move_generator::{DestinationState, MoveGenerator}};
 
 #[derive(Debug, Clone)]
 pub struct Board {
@@ -22,61 +22,133 @@ pub fn add(arr1: [i8; 2], arr2: [i8; 2]) -> [i8; 2] {
 }
 
 impl Board {
-    pub fn get_relative_value(&self, p: ColoredPiece, pos: [i8;2]) -> i32 {
-        let value = 0;
-        value += p.get_value();
-        if p.piece == Pawn {
-            let mut is_endgame = false;
-            if self.count_pieces() < 12 {
-                is_endgame = true;
-            }
-            if p.color == Color::White {
-                value += (7-pos[0] * 10) as i32;
 
-                if pos[0] == 0 {
-                    value += 900;
+    pub fn get_pawn_value(&self, pos: [i8;2], c: Color) -> i32{
+        let mut value = 0;
+        let mut y = pos[0];
+        let x = pos[1];
+        let mut passed_pawn = true;
+        let mut dir = 0;
+        if c == White {
+            dir = -1;
+        } else {
+            dir = 1;
+        }
+        // Checks if pawn is a passed pawn by looking from its pos "up" on its three rows for opposite pawn
+        while y > 0 || y < 7 {
+            for i in -1..1 {
+                match self.arr[y as usize][(x+i) as usize] {
+                    Some(ColoredPiece{color , piece}) => {
+                        if piece == Pawn && color == c.opposite_color() {
+                            passed_pawn = false;
+                        }
+
+                    },
+                    None => {},
                 }
+
             }
-            else {
-                value += (pos[0] * 10) as i32;
-                if pos[0] == 7 {
-                    value += 900;
+            y += dir;
+        }
+        // Pawn value increases as it moves up the board
+        // They also become important in the endgame
+        // Extra points assigned if its a passed pawn 
+        let mut is_endgame = false;
+        if self.count_pieces() < 12 {
+            is_endgame = true;
+        }
+        if c == Color::White {
+            value += (7-pos[0] * 10) as i32;
+
+        }
+        else {
+            value += (pos[0] * 10) as i32;
+        }
+
+        if is_endgame {
+            value += 100;
+        }
+
+        if passed_pawn {
+            value *= 2;
+        }
+
+        value
+    }
+    pub fn get_relative_value(&self, p: ColoredPiece, pos: [i8;2]) -> i32 {
+        let mut value = 0;
+        // Value of piece
+        value += p.get_value();
+
+        if p.piece == Pawn {
+            value += self.get_pawn_value(pos, p.color);
+        }
+
+        let (attackers,num_attackers) = self.is_attacked(pos);
+        let (_, num_defenders) = self.is_defended(pos);
+        // Pieces that are fortifed and take up opponents attacks are somewhat valuable
+        if num_attackers > num_defenders {
+            value += p.get_value() / 10;
+        }
+        // If the piece is capturable by something worth less than it it's effectively hanging and has no value
+        if num_attackers < num_defenders {
+            for attacker in attackers {
+                if attacker.get_value() < p.get_value() {
+                    value = 0;
+                    return value;
                 }
-            }
-            if is_endgame {
-                value += 100;
             }
         }
+
+        // The more space a player has the better
+        // Open files, connected rooks
+        // Pinned pieces
+        // Open kings
         value
     }
 
 
-    pub fn evaluate(&self, c: Color) -> i32 {
+    pub fn evaluate(&self) -> i32 {
         let mut white_score = 0;
         let mut black_score = 0;
+        let mut white_bishop_pair = 0;
+        let mut black_bishop_pair = 0;
         for i in 0..8 {
             for j in 0..8 {
                 match self.arr[i][j] {
                     Some(p) => {
                         if p.color == White {
                             white_score += self.get_relative_value(p, [i as i8,j as i8]);
+                            if p.piece == Bishop {
+                                white_bishop_pair += 1;
+                            }
+                            if white_bishop_pair == 2 {
+                                white_score += 10;
+                            }
                         }
                         else {
-                            black_score += self.get_relative_value(p, [i as i8,j as i8]);
+                            black_score -= self.get_relative_value(p, [i as i8,j as i8]);
+                            if p.piece == Bishop {
+                                black_bishop_pair += 1;
+                            }
+                            if black_bishop_pair == 2 {
+                                black_score += 10;
+                            }
                         }
                     }
                     None =>  {},
                 }
             }
         }
-        white_score
+
+        white_score + black_score
     }
 
     pub fn count_pieces(&self) -> i32 {
         let mut count = 0;
         for i in 0..8 {
             for j in 0..8 {
-                if matches!(self.arr[i][j], Some(p)) {
+                if matches!(self.arr[i][j], Some(_)) {
                     count += 1;
                 }
             }
@@ -108,8 +180,8 @@ impl Board {
         for m in MoveGenerator::get_moves(self, attacker_color) {
             let p = self.get(m.dst);
             if let Some(p) = p {
-                let (a,_) = self.is_attacked(m.dst);
-                if a {
+                let (_,attackers) = self.is_attacked(m.dst);
+                if attackers > 0 {
                     attacked_pieces.push(p.piece);
                 }
             }
@@ -117,30 +189,30 @@ impl Board {
         attacked_pieces
     }
     
-    pub fn is_attacked(&self, pos: [i8;2]) -> (bool,i32) {
-        let mut b = false;
+    pub fn is_attacked(&self, pos: [i8;2]) -> (Vec<Piece>,i32) {
+        let mut pieces = Vec::new();
         let mut attackers = 0;
         let p = self.get(pos).unwrap();
         for m in MoveGenerator::get_moves(&self, p.color.opposite_color()) {
             if m.dst == pos {
-                b = true;
+                pieces.push(self.get(m.src).unwrap().piece);
                 attackers += 1;
             }
         }
-        (b,attackers)
+        (pieces,attackers)
     }
     
-    pub fn is_defended(&self, pos:[i8;2]) -> (bool,i32) {
-        let mut b = false;
+    pub fn is_defended(&self, pos:[i8;2]) -> (Vec<Piece>,i32) {
+        let mut pieces = Vec::new();
         let mut defenders = 0;
         let p = self.get(pos).unwrap();
-        for m in MoveGenerator::get_defense_moves(&self, p.color) {
+        for m in MoveGenerator::get_moves(&self, p.color) {
             if m.dst == pos {
-                b = true;
+                pieces.push(self.get(m.src).unwrap().piece);
                 defenders += 1;
             }
         }
-        (b,defenders)
+        (pieces,defenders)
     }
     
 

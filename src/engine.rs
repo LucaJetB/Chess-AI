@@ -1,8 +1,12 @@
 use crate::board::{Board, Color, Piece, Move};
 use crate::move_generator::{MoveGenerator, DestinationState};
 use Piece::*;
+use Color::*;
 //use core::num::dec2flt::rawfp::RawFloat;
 use std::fs;
+use std::u64::MAX;
+use std::cmp;
+
 
 
 
@@ -47,9 +51,37 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
     moves.first().map(|(m,r)| (*m,*r))
 }
 
-pub fn get_best_move_minimax(board: &Board, depth: i8, color: Color) -> i32 {
+pub fn get_best_move_alpha_beta(board: &Board, depth: i8, alpha: i32, beta: i32, c: Color) -> i32 {
     if depth == 0 {
-        
+        return board.evaluate();
+    }
+    if c == White {
+        for m in MoveGenerator::get_moves(board, White) {
+            let mut b = board.clone();
+            b.play_move(m);
+            let score = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color());
+            if score > alpha {
+                alpha = score;
+                if alpha >= beta {
+                    break;
+                }
+            }
+        }
+        return alpha;
+    }
+    else {
+        for m in MoveGenerator::get_moves(board, Black) {
+            let mut b = board.clone();
+            b.play_move(m);
+            let score = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color());
+            if score < beta {
+                beta = score;
+                if alpha >= beta {
+                    break;
+                }
+            }
+        }
+        return beta;
     }
 }
 
@@ -206,6 +238,65 @@ pub fn play(board: &Board, mut c: Color, mut use_book: bool) {
 
         move_number += 1;
         c = c.opposite_color();
+        board.print();
+        println!("\n");
+        
+        if game_over {
+            println!("King captured");
+            break;
+        }
+    }
+}
+
+pub fn play_minimax(board: &Board, mut player: bool, mut use_book: bool) {
+    let mut game_over = false;
+    let mut move_number = 0;
+    let mut move_history = String::new();
+    let mut board = board.clone();
+    let book = fs::read_to_string("src/book.txt").expect("bad read");
+    let lines = book.lines().collect::<Vec<&str>>();
+    //shuffle lines to get random opening
+
+
+    for _ in 0..100 {
+        let m = if use_book {
+            book_moves(&move_history, &lines, move_number)
+        } else {
+            get_best_move_alpha_beta(&board, 4, -10000000, 10000000, White).map(|(m,_)| m)
+        };
+        if m.is_none() {
+            if use_book {
+                use_book = false;
+                continue;
+            } else {
+                break;
+            }
+
+        }
+        let m = m.unwrap();
+
+        let p = board.get(m.dst);
+        if let Some(p) = p {
+            let (_,attackers) = board.is_attacked(m.dst);
+            let (_,defenders) = board.is_defended(m.dst);
+            println!("{},{}", attackers, defenders);
+
+            if matches!(p.piece, King) {
+                game_over = true;
+            }
+        }
+        
+        m.print();
+        board.play_move(m);
+        move_history.push_str(&m.to_move_string());
+        move_history.push(' ');
+
+        move_number += 1;
+        if player {
+            player = false;
+        } else {
+            player = true;
+        }
         board.print();
         println!("\n");
         
