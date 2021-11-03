@@ -26,7 +26,7 @@ impl Board {
     pub fn get_pawn_value(&self, pos: [i8;2], c: Color) -> i32{
         let mut value = 0;
         let mut y = pos[0];
-        let x = pos[1];
+        let mut x = pos[1];
         let mut passed_pawn = true;
         let mut dir = 0;
         if c == White {
@@ -35,9 +35,15 @@ impl Board {
             dir = 1;
         }
         // Checks if pawn is a passed pawn by looking from its pos "up" on its three rows for opposite pawn
-        while y > 0 || y < 7 {
+        while y > 0 && y < 7 {
             for i in -1..1 {
-                match self.arr[y as usize][(x+i) as usize] {
+                if i == -1 && x == 0 {
+                    x = x;
+                }
+                else {
+                    x = x + i;
+                }
+                match self.arr[y as usize][x as usize] {
                     Some(ColoredPiece{color , piece}) => {
                         if piece == Pawn && color == c.opposite_color() {
                             passed_pawn = false;
@@ -72,7 +78,6 @@ impl Board {
         if passed_pawn {
             value *= 2;
         }
-
         value
     }
     pub fn get_relative_value(&self, p: ColoredPiece, pos: [i8;2]) -> i32 {
@@ -83,6 +88,7 @@ impl Board {
         if p.piece == Pawn {
             value += self.get_pawn_value(pos, p.color);
         }
+
 
         let (attackers,num_attackers) = self.is_attacked(pos);
         let (_, num_defenders) = self.is_defended(pos);
@@ -108,7 +114,7 @@ impl Board {
     }
 
 
-    pub fn evaluate(&self) -> i32 {
+    pub fn evaluate(&self) -> i32 { 
         let mut white_score = 0;
         let mut black_score = 0;
         let mut white_bishop_pair = 0;
@@ -193,7 +199,9 @@ impl Board {
         let mut pieces = Vec::new();
         let mut attackers = 0;
         let p = self.get(pos).unwrap();
-        for m in MoveGenerator::get_moves(&self, p.color.opposite_color()) {
+        // Searches for only moves by the opponent that attack one of the players pieces
+        for m in MoveGenerator::get_moves_with_predicates(&self, p.color.opposite_color(), 
+            |_| true, &|dst_state| dst_state == DestinationState::Capturable) {
             if m.dst == pos {
                 pieces.push(self.get(m.src).unwrap().piece);
                 attackers += 1;
@@ -206,7 +214,9 @@ impl Board {
         let mut pieces = Vec::new();
         let mut defenders = 0;
         let p = self.get(pos).unwrap();
-        for m in MoveGenerator::get_moves(&self, p.color) {
+        // Searches only for the players defending "moves"
+        for m in MoveGenerator::get_moves_with_predicates(&self, p.color, 
+            |_| true, &|dst_state| dst_state == DestinationState::Occupied) {
             if m.dst == pos {
                 pieces.push(self.get(m.src).unwrap().piece);
                 defenders += 1;

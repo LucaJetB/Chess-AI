@@ -51,37 +51,43 @@ pub fn get_best_move(board: &Board, c: Color, depth: i8) -> Option<(Move, i32)> 
     moves.first().map(|(m,r)| (*m,*r))
 }
 
-pub fn get_best_move_alpha_beta(board: &Board, depth: i8, alpha: i32, beta: i32, c: Color) -> i32 {
+pub fn get_best_move_alpha_beta(board: &Board, depth: i8, mut alpha: i32, mut beta: i32, c: Color, return_move: Option<Move>) -> (i32, Option<Move>) {
     if depth == 0 {
-        return board.evaluate();
+        return (board.evaluate(), return_move);
     }
     if c == White {
+        let mut best_move = None;
         for m in MoveGenerator::get_moves(board, White) {
             let mut b = board.clone();
             b.play_move(m);
-            let score = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color());
+            let (score, m1) = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color(), Some(m));
             if score > alpha {
                 alpha = score;
+                best_move = m1;
+                // Alpha-Beta Pruning cutoff
                 if alpha >= beta {
                     break;
                 }
             }
         }
-        return alpha;
+        return (alpha, best_move);
     }
     else {
+        let mut best_move = None;
         for m in MoveGenerator::get_moves(board, Black) {
             let mut b = board.clone();
             b.play_move(m);
-            let score = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color());
+            let (score, m1) = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color(), Some(m));
             if score < beta {
                 beta = score;
+                best_move = m1;
+                // Alpha-Beta Pruning cutoff
                 if alpha >= beta {
                     break;
                 }
             }
         }
-        return beta;
+        return (beta, best_move);
     }
 }
 
@@ -248,7 +254,7 @@ pub fn play(board: &Board, mut c: Color, mut use_book: bool) {
     }
 }
 
-pub fn play_minimax(board: &Board, mut player: bool, mut use_book: bool) {
+pub fn play_alpha_beta(board: &Board, mut player: Color, mut use_book: bool) {
     let mut game_over = false;
     let mut move_number = 0;
     let mut move_history = String::new();
@@ -259,11 +265,7 @@ pub fn play_minimax(board: &Board, mut player: bool, mut use_book: bool) {
 
 
     for _ in 0..100 {
-        let m = if use_book {
-            book_moves(&move_history, &lines, move_number)
-        } else {
-            get_best_move_alpha_beta(&board, 4, -10000000, 10000000, White).map(|(m,_)| m)
-        };
+        let (_,m) = get_best_move_alpha_beta(&board, 4, -10000000, 10000000, player, None);
         if m.is_none() {
             if use_book {
                 use_book = false;
@@ -292,11 +294,7 @@ pub fn play_minimax(board: &Board, mut player: bool, mut use_book: bool) {
         move_history.push(' ');
 
         move_number += 1;
-        if player {
-            player = false;
-        } else {
-            player = true;
-        }
+        player = player.opposite_color();
         board.print();
         println!("\n");
         

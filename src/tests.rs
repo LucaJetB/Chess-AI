@@ -123,4 +123,27 @@ mod tests {
         dbg!(m);
         play(&b, Black, false);
     }
+
+    #[test] 
+    fn test_bad_rook_move_minimax() {
+        let board = 
+       ". . . . . . ♔ .\n\
+        . . . . . . ♙ .\n\
+        ♙ . . ♟ . . . .\n\
+        . ♙ . . . . ♙ .\n\
+        . . ♟ . . ♙ . ♟\n\
+        . . ♖ . . . . .\n\
+        ♖ . . . . . . .\n\
+        . ♚ . . . . . .\n\
+        ";
+
+        let mut b = Board::from_str_piece(board, Black);
+        b.castled = true;
+        b.print();
+        let (_,m) = get_best_move_alpha_beta(&b, 4, -1000000, 1000000, Black, None);
+        dbg!(m);
+        b.play_move(m.unwrap());
+        b.print();
+        //play_alpha_beta(&b, White, false);
+    }
 }
