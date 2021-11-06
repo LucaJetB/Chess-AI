@@ -58,18 +58,24 @@ pub fn get_best_move_alpha_beta(board: &Board, depth: i8, mut alpha: i32, mut be
     if c == White {
         let mut best_move = None;
         for m in MoveGenerator::get_moves(board, White) {
+
             let mut b = board.clone();
             b.play_move(m);
             let (score, m1) = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color(), Some(m));
+            if depth == 4 {
+                println!("Move: {}, Score: {}", m, score);
+            }
             if score > alpha {
                 alpha = score;
-                best_move = m1;
+                best_move = Some(m);
+
                 // Alpha-Beta Pruning cutoff
                 if alpha >= beta {
                     break;
                 }
             }
         }
+
         return (alpha, best_move);
     }
     else {
@@ -78,9 +84,12 @@ pub fn get_best_move_alpha_beta(board: &Board, depth: i8, mut alpha: i32, mut be
             let mut b = board.clone();
             b.play_move(m);
             let (score, m1) = get_best_move_alpha_beta(&b, depth-1, alpha, beta, c.opposite_color(), Some(m));
+            if depth == 4 {
+                println!("Move: {}, Score: {}", m, score);
+            }
             if score < beta {
                 beta = score;
-                best_move = m1;
+                best_move = Some(m);
                 // Alpha-Beta Pruning cutoff
                 if alpha >= beta {
                     break;

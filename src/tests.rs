@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test] 
-    fn test_bad_rook_move_minimax() {
+    fn test_bad_rook_move_alpha_beta() {
         let board = 
        ". . . . . . ♔ .\n\
         . . . . . . ♙ .\n\
@@ -144,6 +144,6 @@ mod tests {
         dbg!(m);
         b.play_move(m.unwrap());
         b.print();
-        //play_alpha_beta(&b, White, false);
+        play_alpha_beta(&b, White, false);
     }
 }

@@ -96,11 +96,16 @@ impl Board {
         if num_attackers > num_defenders {
             value += p.get_value() / 10;
         }
-        // If the piece is capturable by something worth less than it it's effectively hanging and has no value
-        if num_attackers < num_defenders {
+        // Hanging pieces are worthless unless moved or defended.
+        if num_attackers > 0 && num_defenders == 0 {
+            value = 0;
+        }
+        // If the piece is capturable by something worth less than it, it's hanging
+        // And can only be worth as much as its least valuable attacker
+        else if num_attackers < num_defenders {
             for attacker in attackers {
                 if attacker.get_value() < p.get_value() {
-                    value = 0;
+                    value = attacker.get_value();
                     return value;
                 }
             }
@@ -682,6 +687,12 @@ pub struct Move {
 }
 
 impl std::fmt::Debug for Move {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1])
+    }
+}
+
+impl fmt::Display for Move {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({},{}) ({},{})", self.src[0], self.src[1], self.dst[0], self.dst[1])
     }
